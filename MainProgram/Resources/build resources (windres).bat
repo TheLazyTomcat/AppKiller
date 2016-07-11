@@ -1,0 +1,1 @@
+windres -o tray_icon.res     -i  tray_icon.rc         
