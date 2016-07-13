@@ -2,14 +2,23 @@ unit MainForm;
 
 interface
 
+{$IFDEF FPC}
+  {$MODE Delphi}
+{$ENDIF}
+
 uses
-  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, XPMan, StdCtrls, CheckLst, Spin, ExtCtrls, ComCtrls, Menus,
+  SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, {$IFNDEF FPC}XPMan,{$ENDIF} StdCtrls, CheckLst, Spin, ExtCtrls, ComCtrls, Menus,
   APK_Manager;
 
 type
+
+  { TfMainForm }
+
   TfMainForm = class(TForm)
+   {$IFNDEF FPC}
     oXPManifest: TXPManifest;
+  {$ENDIF}
     shpHeader: TShape;
     grbGeneralSettings: TGroupBox;
     cbRunAtStart: TCheckBox;
@@ -63,7 +72,7 @@ type
     AppKillerManager:  TAPKManager;
     ForceClose:        Boolean;
   protected
-    procedure OnTrayMenuItem(Sender: TObject; Action: Integer);
+    procedure OnTrayMenuItem(Sender: TObject; aAction: Integer);
     procedure OnSettingsUpdateRequired(Sender: TObject);
     procedure FormToSettings;
     procedure SettingsToForm;
@@ -77,15 +86,19 @@ var
 
 implementation
 
-{$R *.dfm}
+{$IFDEF FPC}
+  {$R *.lfm}
+{$ELSE}
+  {$R *.dfm}
+{$ENDIF}
 
 uses
   APK_System, APK_Strings, APK_TrayIcon, APK_Keyboard,
   AddProcForm, ShortcutForm;
 
-procedure TfMainForm.OnTrayMenuItem(Sender: TObject; Action: Integer);
+procedure TfMainForm.OnTrayMenuItem(Sender: TObject; aAction: Integer);
 begin
-case Action of
+case aAction of
   TI_MI_ACTION_Restore:
     Show;
   TI_MI_ACTION_Start:
@@ -194,6 +207,14 @@ lblCopyright.Caption := APKSTR_MW_HD_Copyright;
 AppKillerManager := TAPKManager.Create;
 AppKillerManager.OnSettingsUpdateRequired := OnSettingsUpdateRequired;
 AppKillerManager.TrayIcon.OnPopupMenuItem := OnTrayMenuItem;
+{$IFDEF FPC}
+(*
+ [FPC]
+ It seems object TMemo.Lines is recreated later, meaning what is assigned at
+ this time will not work.
+*)
+InitializeWnd;
+{$ENDIF}
 AppKillerManager.Log.ExternalLogAdd(meLog.Lines);
 AppKillerManager.Initialize;
 SettingsToForm;

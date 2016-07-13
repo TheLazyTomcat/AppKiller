@@ -71,17 +71,17 @@ else
 end;
 end;
 
-{$IF not Declared(PHICON)}
 type
-  PHICON = ^HICON;
-{$IFEND}
-
   TAPKDeviceEntry = record
     DrivePath:  String;
     DevicePath: String;
   end;
 
   TAPKDevicesList = array of TAPKDeviceEntry;
+
+{$IF not Declared(PHICON)}
+  PHICON = ^HICON;
+{$IFEND}
 
 {$IF not Declared(GetProcessImageFileName)}
 Function GetProcessImageFileNameA(hProcess: THandle; lpImageFileName: LPSTR; nSize: DWORD): DWORD; stdcall; external 'psapi.dll';
@@ -176,7 +176,9 @@ end;
 procedure TAPKProcessEnumeratorInternal.InitForWin64;
 var
   ModuleHandle: THandle;
+{$IFNDEF x64}
   ResultValue:  BOOL;
+{$ENDIF}
 begin
 fRunningInWin64 := False;
 ModuleHandle := GetModuleHandle('kernel32.dll');
@@ -549,14 +551,11 @@ end;
 
 procedure TAPKProcessEnumeratorThread.Enumerate;
 begin
-{$IFDEF DevMsgs}
-  {$message 'D2010+ also deprecated Resume'}
-{$ENDIF}
-{$IFDEF FPC}
+{$IF Defined(FPC) or (CompilerVersion >= 21)}
 Start;
 {$ELSE}
 Resume;
-{$ENDIF}
+{$IFEND}
 end;
 
 //------------------------------------------------------------------------------

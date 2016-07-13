@@ -62,8 +62,9 @@ type
 implementation
 
 uses
-  Windows, Messages, PSApi, SysUtils,
-  APK_ProcEnum;
+  Windows, Messages, {$IFDEF FPC}jwaPSApi{$ELSE}PSApi{$ENDIF}, SysUtils,
+  APK_ProcEnum
+  {$IF Defined(FPC) and not Defined(Unicode)}, LazUTF8{$IFEND}  ;
 
 procedure TAPKTerminatorThread.sync_LogWrite;
 begin
@@ -160,7 +161,7 @@ begin
 ForegroundWindow := GetForegroundWindow;
 If ForegroundWindow <> 0 then
   begin
-    GetWindowThreadProcessId(ForegroundWindow,ProcessID);
+    GetWindowThreadProcessId(ForegroundWindow,{%H-}ProcessID);
     ProcessHandle := OpenProcess(PROCESS_QUERY_INFORMATION or PROCESS_VM_READ or PROCESS_TERMINATE,False,ProcessID);
     If ProcessHandle <> 0 then
       try
@@ -219,10 +220,22 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TAPKTerminatorThread.TerminateUnresponsive;
 type
   TWindowHandles = array of HWND;
   PWindowHandles = ^TWindowHandles;
+
+Function EnumWindowsCallback(hwnd: HWND; lParam: LPARAM): BOOL; stdcall;
+begin
+  Result := False;
+  If hwnd <> 0 then
+    begin
+      SetLength({%H-}PWindowHandles(lParam)^,Length({%H-}PWindowHandles(lParam)^) + 1);
+      {%H-}PWindowHandles(lParam)^[High({%H-}PWindowHandles(lParam)^)] := hwnd;
+      Result := True;
+    end;
+end;
+
+procedure TAPKTerminatorThread.TerminateUnresponsive;
 var
   Windows:        TWindowHandles;
   i:              Integer;
@@ -231,16 +244,6 @@ var
   ProcessHandle:  THandle;
   ProcessName:    String;
   TerminatingID:  array of DWORD;
-
-  Function EnumWindowsCallback(hwnd: HWND; lParam: LPARAM): BOOL; stdcall;
-  begin
-    Result := True;
-    If hwnd <> 0 then
-      begin
-        SetLength(PWindowHandles(lParam)^,Length(PWindowHandles(lParam)^) + 1);
-        PWindowHandles(lParam)^[High(PWindowHandles(lParam)^)] := hwnd;
-      end
-  end;
 
   Function IsInTerminatingIDList(PID: DWORD): Boolean;
   var
@@ -256,12 +259,12 @@ var
   end;
 
 begin
-If EnumWindows(@EnumWindowsCallback,LPARAM(@Windows)) then
+If EnumWindows(@EnumWindowsCallback,{%H-}LPARAM(@Windows)) then
   For i := Low(Windows) to High(Windows) do
     begin
-      If SendMessageTimeout(Windows[i],WM_NULL,0,0,SMTO_ABORTIFHUNG or SMTO_BLOCK,fLocalSettings.Settings.GeneralSettings.ResponseTimeout,MsgResult) = 0 then
+      If SendMessageTimeout(Windows[i],WM_NULL,0,0,SMTO_ABORTIFHUNG or SMTO_BLOCK,fLocalSettings.Settings.GeneralSettings.ResponseTimeout,{%H-}MsgResult) = 0 then
         begin
-          GetWindowThreadProcessId(Windows[i],ProcessID);
+          GetWindowThreadProcessId(Windows[i],{%H-}ProcessID);
           If not IsInTerminatingIDList(ProcessID) then
             begin
               ProcessHandle := OpenProcess(PROCESS_QUERY_INFORMATION or PROCESS_VM_READ or PROCESS_TERMINATE,False,ProcessID);
@@ -272,7 +275,7 @@ If EnumWindows(@EnumWindowsCallback,LPARAM(@Windows)) then
                       If not IsInTerminatingList(ProcessName) and not IsInNeverTerminateList(ProcessName) then
                         begin
                           fTerminatingList.Add(ProcessName);
-                          SetLength(TerminatingID,Length(TerminatingID) + 1);
+                          SetLength(TerminatingID,Length({%H-}TerminatingID) + 1);
                           TerminatingID[High(TerminatingID)] := ProcessID;
                           If TerminateProcess(ProcessHandle,0) then
                             WriteToLog(Format('TUP: Terminated process - %s (%d)',[ProcessName,ProcessID]));
@@ -324,14 +327,11 @@ end;
 
 procedure TAPKTerminatorThread.StartTermination;
 begin
-{$IFDEF DevMsgs}
-  {$message 'D2010+ also deprecated Resume'}
-{$ENDIF}
-{$IFDEF FPC}
+{$IF Defined(FPC) or (CompilerVersion >= 21)}
 Start;
 {$ELSE}
 Resume;
-{$ENDIF}
+{$IFEND}
 end;
 
 //------------------------------------------------------------------------------

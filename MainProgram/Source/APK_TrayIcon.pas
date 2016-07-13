@@ -74,9 +74,21 @@ implementation
 
 uses
   Classes, Math, ShellAPI, Forms,
-  APK_Strings;
+  APK_Strings
+  {$IF Defined(FPC) and not Defined(Unicode)}, LazUTF8{$IFEND};
 
 {$R '..\Resources\tray_icon.res'}
+
+{$IFDEF FPC}
+Function Shell_NotifyIcon(dwMessage: DWORD; lpdata: PNotifyIconData): BOOL;
+begin
+{$IFDEF Unicode}
+Result := ShellAPI.Shell_NotifyIconW(dwMessage,PNOTIFYICONDATAW(lpData));
+{$ELSE}
+Result := ShellAPI.Shell_NotifyIconA(dwMessage,PNOTIFYICONDATAA(lpData));
+{$ENDIF}
+end;
+{$ENDIF}
 
 {==============================================================================}
 {------------------------------------------------------------------------------}

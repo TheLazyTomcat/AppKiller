@@ -53,7 +53,8 @@ type
 implementation
 
 uses
-  Windows, SysUtils, IniFiles, DefRegistry;
+  Windows, SysUtils, IniFiles, DefRegistry
+  {$IF Defined(FPC) and not Defined(Unicode)}, LazUTF8{$IFEND};
 
 const
   DefaultSettings: TAPKSettingsStruct = (
@@ -156,12 +157,7 @@ try
   For i := Low(fSettings.ProcListTerminate) to High(fSettings.ProcListTerminate) do
     begin
       Ini.WriteBool('ProcListTerminate',Format('Item[%d].Active',[i]),fSettings.ProcListTerminate[i].Active);
-    {$IFDEF DevMsgs}{$message 'check in laz'}{$ENDIF}
-    //{$IF Defined(FPC) and not Defined(Unicode)}
-    //  Ini.WriteString('ProcListTerminate',Format('Item[%d].ProcessName',[i]),UTF8ToWinCP(fSettings.ProcListTerminate[i].ProcessName));
-    //{$ELSE}
       Ini.WriteString('ProcListTerminate',Format('Item[%d].ProcessName',[i]),fSettings.ProcListTerminate[i].ProcessName);
-    //{$IFEND}
     end;
   i := Length(fSettings.ProcListTerminate);
   while Ini.ValueExists('ProcListTerminate',Format('Item[%d].Active',[i])) or

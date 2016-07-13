@@ -41,7 +41,10 @@ implementation
 uses
   SysUtils,
   AuxTypes, RawInputKeyboard,
-  APK_Strings;
+  APK_Strings
+  {$IF Defined(FPC) and not Defined(Unicode) and (FPC_FULLVERSION < 20701)}
+  , LazUTF8
+  {$IFEND};
 
 procedure TAPKManager.TriggerHandler(Sender: TObject);
 begin

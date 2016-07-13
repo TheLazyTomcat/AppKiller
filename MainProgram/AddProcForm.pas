@@ -1,10 +1,14 @@
 unit AddProcForm;
 
+{$IFDEF FPC}
+  {$MODE Delphi}
+{$ENDIF}
+
 interface
 
 uses
-  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ExtCtrls, ComCtrls, ImgList, APK_ProcEnum;
+  Windows, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, StdCtrls, ExtCtrls, ComCtrls, APK_ProcEnum;
 
 type
   TfAddProcForm = class(TForm)
@@ -48,7 +52,11 @@ var
 
 implementation
 
-{$R *.dfm}
+{$IFDEF FPC}
+  {$R *.lfm}
+{$ELSE}
+  {$R *.dfm}
+{$ENDIF}
 
 procedure TfAddProcForm.OnEnumerated(Sender: TOBject);
 var
@@ -103,7 +111,11 @@ begin
 lvRunningProcesses.DoubleBuffered := True;
 Enumerator := TAPKProcessEnumerator.Create;
 Enumerator.OnEnumerationDone := OnEnumerated;
+{$IFDEF FPC}
+Enumerator.IconBackground := lvRunningProcesses.GetDefaultColor(dctBrush);
+{$ELSE}
 Enumerator.IconBackground := lvRunningProcesses.Color;
+{$ENDIF}
 end;
 
 //------------------------------------------------------------------------------
@@ -143,7 +155,9 @@ NewWidth := lvRunningProcesses.Width - (2 * GetSystemMetrics(SM_CXEDGE)) - GetSy
 For i := 0 to (lvRunningProcesses.Columns.Count - 2) do
   Dec(NewWidth,lvRunningProcesses.Columns[i].Width);
 lvRunningProcesses.Columns[5].Width := NewWidth;
+{$IFNDEF FPC}
 lvRunningProcesses.Scroll(0,0);
+{$ENDIF}
 end;
 
 //------------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 object fMainForm: TfMainForm
-  Left = 532
-  Top = 113
+  Left = 576
+  Top = 116
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
   Caption = 'AppKiller'
@@ -13570,11 +13570,11 @@ object fMainForm: TfMainForm
     end
   end
   object oXPManifest: TXPManifest
-    Left = 632
+    Left = 624
   end
   object pmnLists: TPopupMenu
     OnPopup = pmnListsPopup
-    Left = 600
+    Left = 656
     object pmniLists_Add: TMenuItem
       Caption = 'Add process...'
       OnClick = pmniLists_AddClick

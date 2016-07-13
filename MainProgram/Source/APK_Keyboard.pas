@@ -32,10 +32,10 @@ type
     class Function ShortcutAsText(Shortcut: TAPKShortcut): String; virtual;
     constructor Create;
     destructor Destroy; override;
+    property Shortcut: TAPKShortcut read fShortcut write fShortcut;
   published
     property Mode: TAPKKeyboardMode read fMode write fMode;
     property InputManager: TRawInputManager read fInputManager;
-    property Shortcut: TAPKShortcut read fShortcut write fShortcut;
     property OnTrigger: TNotifyEvent read fOnTrigger write fOnTrigger;
     property OnShortcut: TAPKShortcutEvent read fOnShortcut write fOnShortcut;
   end;
