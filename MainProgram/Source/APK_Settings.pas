@@ -5,7 +5,8 @@ unit APK_Settings;
 interface
 
 uses
-  AuxTypes;
+  AuxTypes,
+  APK_Keyboard;
 
 type
   TAPKProcessListItem = record
@@ -45,15 +46,16 @@ type
     procedure LoadFromIni(const FileName: String); virtual;
     procedure Save; virtual;
     procedure Load; virtual;
+    Function GetShortcut: TAPKShortcut; virtual;
+    procedure SetShortcut(Shortcut: TAPKShortcut); virtual;
     property Settings: TAPKSettingsStruct read fSettings;
     property SettingsPtr: PAPKSettingsStruct read GetSettingsPtr;
-  published
   end;
 
 implementation
 
 uses
-  Windows, SysUtils, IniFiles, DefRegistry
+  Windows, SysUtils, IniFiles, DefRegistry, RawInputKeyboard
   {$IF Defined(FPC) and not Defined(Unicode)}, LazUTF8{$IFEND};
 
 const
@@ -240,6 +242,33 @@ LoadFromIni(ExtractFilePath(SysToUTF8(ParamStr(0))) + 'AppKiller.ini');
 {$ELSE}
 LoadFromIni(ExtractFilePath(ParamStr(0)) + 'AppKiller.ini');
 {$IFEND}
+end;
+
+//------------------------------------------------------------------------------
+
+Function TAPKSettings.GetShortcut: TAPKShortcut;
+begin
+Result.MainKey := fSettings.GeneralSettings.Shortcut shr 16;
+Result.ShiftStates := [];
+If fSettings.GeneralSettings.Shortcut and 1 <> 0 then
+  Include(Result.ShiftStates,kssControl);
+If fSettings.GeneralSettings.Shortcut and 2 <> 0 then
+  Include(Result.ShiftStates,kssAlt);
+If fSettings.GeneralSettings.Shortcut and 4 <> 0 then
+  Include(Result.ShiftStates,kssShift);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TAPKSettings.SetShortcut(Shortcut: TAPKShortcut);
+begin
+fSettings.GeneralSettings.Shortcut := Shortcut.MainKey shl 16;
+If kssControl in Shortcut.ShiftStates then
+  fSettings.GeneralSettings.Shortcut := fSettings.GeneralSettings.Shortcut or 1;
+If kssAlt in Shortcut.ShiftStates then
+  fSettings.GeneralSettings.Shortcut := fSettings.GeneralSettings.Shortcut or 2;
+If kssShift in Shortcut.ShiftStates then
+  fSettings.GeneralSettings.Shortcut := fSettings.GeneralSettings.Shortcut or 4;
 end;
 
 end.

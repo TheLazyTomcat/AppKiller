@@ -111,7 +111,7 @@ AutoIncBuild=1
 MajorVer=3
 MinorVer=0
 Release=0
-Build=39
+Build=40
 Debug=0
 PreRelease=0
 Special=0
@@ -122,7 +122,7 @@ CodePage=1250
 [Version Info Keys]
 CompanyName=František Milt
 FileDescription=Application Killer
-FileVersion=3.0.0.39
+FileVersion=3.0.0.40
 InternalName=AppKiller
 LegalCopyright=© 2010 - 2016 František Milt
 LegalTrademarks=AppKiller

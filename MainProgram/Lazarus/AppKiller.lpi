@@ -18,7 +18,7 @@
       <UseVersionInfo Value="True"/>
       <AutoIncrementBuild Value="True"/>
       <MajorVersionNr Value="3"/>
-      <BuildNr Value="19"/>
+      <BuildNr Value="20"/>
       <Language Value="0405"/>
       <StringTable Comments="Main program of AppKiller 3.x" CompanyName="František Milt" FileDescription="Application Killer" InternalName="AppKiller" LegalCopyright="© 2010 - 2016 František Milt" LegalTrademarks="AppKiller" OriginalFilename="AppKiller.exe" ProductName="AppKiller 3" ProductVersion="3.0.0"/>
     </VersionInfo>

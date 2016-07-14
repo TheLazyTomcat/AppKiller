@@ -40,7 +40,6 @@ implementation
 
 uses
   SysUtils,
-  AuxTypes, RawInputKeyboard,
   APK_Strings
   {$IF Defined(FPC) and not Defined(Unicode) and (FPC_FULLVERSION < 20701)}
   , LazUTF8
@@ -94,38 +93,19 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TAPKManager.Initialize;
-var
-  TempShortcut: TAPKShortcut;
 begin
 fSettings.Load;
 fTrayIcon.SetTipText(APKSTR_CM_ProgramTitle); // default text, changed later
 fTrayIcon.ShowTrayIcon;
-TempShortcut.MainKey := fSettings.Settings.GeneralSettings.Shortcut shr 16;
-TempShortcut.ShiftStates := [];
-If fSettings.Settings.GeneralSettings.Shortcut and 1 <> 0 then
-  Include(TempShortcut.ShiftStates,kssControl);
-If fSettings.Settings.GeneralSettings.Shortcut and 2 <> 0 then
-  Include(TempShortcut.ShiftStates,kssAlt);
-If fSettings.Settings.GeneralSettings.Shortcut and 4 <> 0 then
-  Include(TempShortcut.ShiftStates,kssShift);
-fKeyboard.Shortcut := TempShortcut;
+fKeyboard.Shortcut := fSettings.GetShortcut;
 fKeyboard.Mode := kmIntercept;
 end;
 
 //------------------------------------------------------------------------------
 
 procedure TAPKManager.Finalize;
-var
-  Temp: UInt32;
 begin
-Temp := fKeyboard.Shortcut.MainKey shl 16;
-If kssControl in fKeyboard.Shortcut.ShiftStates then
-  Temp := Temp or 1;
-If kssAlt in fKeyboard.Shortcut.ShiftStates then
-  Temp := Temp or 2;
-If kssShift in fKeyboard.Shortcut.ShiftStates then
-  Temp := Temp or 4;
-fSettings.SettingsPtr^.GeneralSettings.Shortcut := Temp;
+fSettings.SetShortcut(fKeyboard.Shortcut);
 fSettings.Save;
 end;
 
