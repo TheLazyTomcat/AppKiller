@@ -7,8 +7,9 @@ unit AddProcForm;
 interface
 
 uses
-  Windows, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ExtCtrls, ComCtrls, APK_ProcEnum;
+  Windows, SysUtils, Variants, Classes, Graphics, Controls, Forms, Dialogs,
+  StdCtrls, ExtCtrls, ComCtrls, ImgList,
+  APK_ProcEnum;
 
 type
   TfAddProcForm = class(TForm)
@@ -39,12 +40,16 @@ type
     procedure btnCancelClick(Sender: TObject);  
     procedure tmrLoadingTimerTimer(Sender: TObject);
   private
-    PromptResult: Boolean;
+    fSelectedProcesses: TStringList;
   protected
-    Enumerator: TAPKProcessEnumerator;
+    Enumerator:   TAPKProcessEnumerator;
+    PreviousCtrl: TWinControl;
+    ActiveCtrl:   TWinControl;
     procedure OnEnumerated(Sender: TOBject);
+    procedure ActiveControlChange(Sender: TObject);
   public
     Function ShowAsPrompt: Boolean;
+    property SelectedProcesses: TStringList read fSelectedProcesses;
   end;
 
 var
@@ -95,13 +100,25 @@ end;
 
 //------------------------------------------------------------------------------
 
-Function TfAddProcForm.ShowAsPrompt: Boolean;
+procedure TfAddProcForm.ActiveControlChange(Sender: TObject);
 begin
-PromptResult := False;
+PreviousCtrl := ActiveCtrl;
+ActiveCtrl := ActiveControl;
+end;
+
+//------------------------------------------------------------------------------
+
+Function TfAddProcForm.ShowAsPrompt: Boolean;
+var
+  i:  Integer;
+begin
 leProcessName.Text := '';
+For i := 0 to Pred(lvRunningProcesses.Items.Count) do
+   lvRunningProcesses.Items[i].Selected := False;
 btnRefresh.OnClick(nil);
+fSelectedProcesses.Clear;
 ShowModal;
-Result := PromptResult;
+Result := fSelectedProcesses.Count > 0;
 end;
 
 //==============================================================================
@@ -116,12 +133,16 @@ Enumerator.IconBackground := lvRunningProcesses.GetDefaultColor(dctBrush);
 {$ELSE}
 Enumerator.IconBackground := lvRunningProcesses.Color;
 {$ENDIF}
+Screen.OnActiveControlChange := ActiveControlChange;
+fSelectedProcesses := TStringList.Create;
 end;
 
 //------------------------------------------------------------------------------
 
 procedure TfAddProcForm.FormDestroy(Sender: TObject);
 begin
+fSelectedProcesses.Free;
+Screen.OnActiveControlChange := nil;
 Enumerator.Free;
 end;
 
@@ -172,7 +193,10 @@ end;
 procedure TfAddProcForm.lvRunningProcessesDblClick(Sender: TObject);
 begin
 If lvRunningProcesses.ItemIndex >= 0 then
-  leProcessName.Text := lvRunningProcesses.Items[lvRunningProcesses.ItemIndex].Caption;
+  begin
+    SelectedProcesses.Add(lvRunningProcesses.Items[lvRunningProcesses.ItemIndex].Caption);
+    Close;
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -193,13 +217,29 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TfAddProcForm.btnAcceptClick(Sender: TObject);
+var
+  i:  Integer;
 begin
-If leProcessName.Text <> '' then
+If PreviousCtrl = lvRunningProcesses then
   begin
-    PromptResult := True;
-    Close;
+    If lvRunningProcesses.SelCount > 0 then
+      begin
+        For i := 0 to Pred(lvRunningProcesses.Items.Count) do
+          If lvRunningProcesses.Items[i].Selected then
+            SelectedProcesses.Add(lvRunningProcesses.Items[i].Caption);
+        Close;
+      end
+    else MessageDlg('No process selected.',mtError,[mbOK],0);
   end
-else MessageDlg('Process name cannot be empty.',mtError,[mbOK],0);
+else
+  begin
+    If leProcessName.Text <> '' then
+      begin
+        SelectedProcesses.Add(leProcessName.Text);
+        Close;
+      end
+    else MessageDlg('Process name cannot be empty.',mtError,[mbOK],0);
+  end;
 end;
  
 //------------------------------------------------------------------------------

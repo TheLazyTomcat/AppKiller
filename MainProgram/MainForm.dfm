@@ -13497,8 +13497,9 @@ object fMainForm: TfMainForm
       Width = 185
       Height = 121
       ItemHeight = 13
-      PopupMenu = pmnLists
+      PopupMenu = pmnTermList
       TabOrder = 0
+      OnDblClick = clbProcTermDblClick
     end
     object clbProcNoTerm: TCheckListBox
       Tag = 2
@@ -13507,8 +13508,9 @@ object fMainForm: TfMainForm
       Width = 185
       Height = 121
       ItemHeight = 13
-      PopupMenu = pmnLists
+      PopupMenu = pmnNoTermList
       TabOrder = 1
+      OnDblClick = clbProcNoTermDblClick
     end
   end
   object btnChangeShortcut: TButton
@@ -13570,44 +13572,86 @@ object fMainForm: TfMainForm
     end
   end
   object oXPManifest: TXPManifest
-    Left = 624
+    Left = 592
   end
-  object pmnLists: TPopupMenu
-    OnPopup = pmnListsPopup
-    Left = 656
-    object pmniLists_Add: TMenuItem
+  object pmnTermList: TPopupMenu
+    OnPopup = pmnTermListPopup
+    Left = 624
+    object pmniTermList_Add: TMenuItem
       Caption = 'Add process...'
-      OnClick = pmniLists_AddClick
+      ShortCut = 45
+      OnClick = pmniTermList_AddClick
     end
-    object pmniLists_Remove: TMenuItem
+    object pmniTermList_Remove: TMenuItem
       Caption = 'Remove selected process'
-      OnClick = pmniLists_RemoveClick
+      ShortCut = 46
+      OnClick = pmniTermList_RemoveClick
     end
-    object N1: TMenuItem
+    object TermList_N1: TMenuItem
       Caption = '-'
     end
-    object pmniLists_MarkAll: TMenuItem
+    object pmniTermList_MarkAll: TMenuItem
       Caption = 'Mark all'
-      OnClick = pmniLists_MarkAllClick
+      OnClick = pmniTermList_MarkAllClick
     end
-    object pmniLists_UnmarkAll: TMenuItem
+    object pmniTermList_UnmarkAll: TMenuItem
       Caption = 'Unmark all'
-      OnClick = pmniLists_UnmarkAllClick
+      OnClick = pmniTermList_UnmarkAllClick
     end
-    object pmniLists_Invert: TMenuItem
+    object pmniTermList_Invert: TMenuItem
       Caption = 'Invert marks'
-      OnClick = pmniLists_InvertClick
+      OnClick = pmniTermList_InvertClick
     end
-    object N2: TMenuItem
+    object TermList_N2: TMenuItem
       Caption = '-'
     end
-    object pmniLists_MoveUp: TMenuItem
+    object pmniTermList_MoveUp: TMenuItem
       Caption = 'Move up'
-      OnClick = pmniLists_MoveUpClick
+      OnClick = pmniTermList_MoveUpClick
     end
-    object pmniLists_MoveDown: TMenuItem
+    object pmniTermList_MoveDown: TMenuItem
       Caption = 'Move down'
-      OnClick = pmniLists_MoveDownClick
+      OnClick = pmniTermList_MoveDownClick
+    end
+  end
+  object pmnNoTermList: TPopupMenu
+    OnPopup = pmnNoTermListPopup
+    Left = 656
+    object pmniNoTermList_Add: TMenuItem
+      Caption = 'Add process...'
+      ShortCut = 45
+      OnClick = pmniNoTermList_AddClick
+    end
+    object pmniNoTermList_Remove: TMenuItem
+      Caption = 'Remove selected process'
+      ShortCut = 46
+      OnClick = pmniNoTermList_RemoveClick
+    end
+    object NoTermList_N1: TMenuItem
+      Caption = '-'
+    end
+    object pmniNoTermList_MarkAll: TMenuItem
+      Caption = 'Mark all'
+      OnClick = pmniNoTermList_MarkAllClick
+    end
+    object pmniNoTermList_UnmarkAll: TMenuItem
+      Caption = 'Unmark all'
+      OnClick = pmniNoTermList_UnmarkAllClick
+    end
+    object pmniNoTermList_Invert: TMenuItem
+      Caption = 'Invert marks'
+      OnClick = pmniNoTermList_InvertClick
+    end
+    object NoTermList_N2: TMenuItem
+      Caption = '-'
+    end
+    object pmniNoTermList_MoveUp: TMenuItem
+      Caption = 'Move up'
+      OnClick = pmniNoTermList_MoveUpClick
+    end
+    object pmniNoTermList_MoveDown: TMenuItem
+      Caption = 'Move down'
+      OnClick = pmniNoTermList_MoveDownClick
     end
   end
 end

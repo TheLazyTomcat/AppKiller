@@ -142,7 +142,10 @@ begin
 If Msg.Msg = fMessageID then
   case Msg.LParam of
     WM_RBUTTONDOWN:   begin
-                        SetForegroundWindow(Application.MainForm.Handle);
+                        If Application.MainForm.Visible then
+                          SetForegroundWindow(Screen.ActiveForm.Handle)
+                        else
+                          SetForegroundWindow(Application.MainForm.Handle);
                         GetCursorPos({%H-}PopupPoint);
                         fPopupMenu.Popup(PopupPoint.X,PopupPoint.Y);
                         Handled := True;

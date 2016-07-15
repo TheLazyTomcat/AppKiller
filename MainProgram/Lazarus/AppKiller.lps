@@ -4,13 +4,13 @@
     <PathDelim Value="\"/>
     <Version Value="9"/>
     <BuildModes Active="Debug_win_x86"/>
-    <Units Count="31">
+    <Units Count="34">
       <Unit0>
         <Filename Value="AppKiller.lpr"/>
         <IsPartOfProject Value="True"/>
         <TopLine Value="16"/>
         <CursorPos X="16" Y="11"/>
-        <UsageCount Value="32"/>
+        <UsageCount Value="33"/>
         <Loaded Value="True"/>
       </Unit0>
       <Unit1>
@@ -20,13 +20,13 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <EditorIndex Value="-1"/>
-        <UsageCount Value="32"/>
+        <UsageCount Value="33"/>
       </Unit1>
       <Unit2>
         <Filename Value="..\Source\APK_InstanceControl.pas"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="-1"/>
-        <UsageCount Value="32"/>
+        <UsageCount Value="33"/>
       </Unit2>
       <Unit3>
         <Filename Value="..\Source\APK_Strings.pas"/>
@@ -34,25 +34,22 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="32"/>
         <CursorPos X="13" Y="45"/>
-        <UsageCount Value="32"/>
+        <UsageCount Value="33"/>
       </Unit3>
       <Unit4>
         <Filename Value="..\Source\APK_Keyboard.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="23"/>
-        <UsageCount Value="32"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="33"/>
       </Unit4>
       <Unit5>
         <Filename Value="..\Source\APK_Manager.pas"/>
         <IsPartOfProject Value="True"/>
-        <IsVisibleTab Value="True"/>
-        <EditorIndex Value="3"/>
-        <TopLine Value="30"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="12"/>
         <CursorPos X="12" Y="42"/>
-        <UsageCount Value="32"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="33"/>
       </Unit5>
       <Unit6>
         <Filename Value="..\Source\APK_ProcEnum.pas"/>
@@ -60,31 +57,29 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="242"/>
         <CursorPos X="4" Y="254"/>
-        <UsageCount Value="32"/>
+        <UsageCount Value="33"/>
       </Unit6>
       <Unit7>
         <Filename Value="..\Source\APK_Settings.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="6"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="248"/>
         <CursorPos X="75" Y="271"/>
-        <UsageCount Value="32"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="33"/>
       </Unit7>
       <Unit8>
         <Filename Value="..\Source\APK_System.pas"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="-1"/>
-        <UsageCount Value="32"/>
+        <UsageCount Value="33"/>
       </Unit8>
       <Unit9>
         <Filename Value="..\Source\APK_Terminator.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="237"/>
         <CursorPos X="19" Y="240"/>
-        <UsageCount Value="32"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="33"/>
       </Unit9>
       <Unit10>
         <Filename Value="..\Source\APK_TrayIcon.pas"/>
@@ -92,7 +87,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="77"/>
         <CursorPos Y="88"/>
-        <UsageCount Value="32"/>
+        <UsageCount Value="33"/>
       </Unit10>
       <Unit11>
         <Filename Value="..\AddProcForm.pas"/>
@@ -100,10 +95,10 @@
         <ComponentName Value="fAddProcForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="4"/>
+        <EditorIndex Value="2"/>
         <CursorPos X="42" Y="11"/>
-        <UsageCount Value="32"/>
+        <UsageCount Value="33"/>
+        <Loaded Value="True"/>
       </Unit11>
       <Unit12>
         <Filename Value="..\ShortcutForm.pas"/>
@@ -111,9 +106,11 @@
         <ComponentName Value="fShortcutForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <EditorIndex Value="-1"/>
+        <EditorIndex Value="3"/>
+        <TopLine Value="16"/>
         <CursorPos X="3" Y="10"/>
-        <UsageCount Value="32"/>
+        <UsageCount Value="33"/>
+        <Loaded Value="True"/>
       </Unit12>
       <Unit13>
         <Filename Value="..\Source\Libs\SimpleLog.pas"/>
@@ -130,10 +127,10 @@
         <ComponentName Value="fMainForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
-        <TopLine Value="334"/>
-        <CursorPos X="15" Y="213"/>
-        <UsageCount Value="13"/>
+        <CursorPos Y="15"/>
+        <UsageCount Value="14"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
       </Unit14>
@@ -247,134 +244,57 @@
       </Unit29>
       <Unit30>
         <Filename Value="..\Source\Libs\RawInputKeyboard.pas"/>
-        <EditorIndex Value="4"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="24"/>
         <CursorPos X="34" Y="40"/>
         <UsageCount Value="10"/>
-        <Loaded Value="True"/>
       </Unit30>
+      <Unit31>
+        <Filename Value="..\Nová složka\ShortcutForm.pas"/>
+        <EditorIndex Value="-1"/>
+        <UsageCount Value="10"/>
+      </Unit31>
+      <Unit32>
+        <Filename Value="..\Nová složka\AddProcForm.pas"/>
+        <EditorIndex Value="-1"/>
+        <UsageCount Value="10"/>
+      </Unit32>
+      <Unit33>
+        <Filename Value="..\Nová složka\MainForm.pas"/>
+        <HasResources Value="True"/>
+        <EditorIndex Value="-1"/>
+        <UsageCount Value="10"/>
+      </Unit33>
     </Units>
-    <JumpHistory Count="30" HistoryIndex="29">
+    <JumpHistory Count="7" HistoryIndex="6">
       <Position1>
         <Filename Value="..\MainForm.pas"/>
-        <Caret Line="345" Column="66" TopLine="343"/>
+        <Caret Line="214" Column="15" TopLine="214"/>
       </Position1>
       <Position2>
-        <Filename Value="..\Source\APK_Terminator.pas"/>
-        <Caret Line="257" Column="26" TopLine="246"/>
+        <Filename Value="..\MainForm.pas"/>
+        <Caret Line="238" Column="52" TopLine="322"/>
       </Position2>
       <Position3>
-        <Filename Value="..\Source\APK_Terminator.pas"/>
-        <Caret Line="258" Column="3" TopLine="230"/>
+        <Filename Value="..\MainForm.pas"/>
+        <Caret Line="347" TopLine="321"/>
       </Position3>
       <Position4>
-        <Filename Value="..\Source\APK_Terminator.pas"/>
-        <Caret Line="260" TopLine="247"/>
+        <Filename Value="..\MainForm.pas"/>
+        <Caret Line="332" Column="5" TopLine="310"/>
       </Position4>
       <Position5>
-        <Filename Value="..\Source\APK_Terminator.pas"/>
-        <Caret Line="238" TopLine="225"/>
+        <Filename Value="..\MainForm.pas"/>
+        <Caret Line="45" Column="16" TopLine="301"/>
       </Position5>
       <Position6>
-        <Filename Value="..\Source\APK_Terminator.pas"/>
-        <Caret Line="239" TopLine="225"/>
+        <Filename Value="..\MainForm.pas"/>
+        <Caret Line="334" Column="44" TopLine="321"/>
       </Position6>
       <Position7>
-        <Filename Value="..\Source\APK_Terminator.pas"/>
-        <Caret Line="260" Column="60" TopLine="244"/>
+        <Filename Value="..\MainForm.pas"/>
+        <Caret Line="329" Column="15" TopLine="324"/>
       </Position7>
-      <Position8>
-        <Filename Value="..\Source\APK_Terminator.pas"/>
-        <Caret Line="265" Column="46" TopLine="257"/>
-      </Position8>
-      <Position9>
-        <Filename Value="..\Source\APK_Terminator.pas"/>
-        <Caret Line="260" TopLine="255"/>
-      </Position9>
-      <Position10>
-        <Filename Value="..\Source\APK_Terminator.pas"/>
-        <Caret Line="238" TopLine="225"/>
-      </Position10>
-      <Position11>
-        <Filename Value="..\Source\APK_Terminator.pas"/>
-        <Caret Line="239" Column="26" TopLine="225"/>
-      </Position11>
-      <Position12>
-        <Filename Value="..\Source\APK_Terminator.pas"/>
-        <Caret Line="260" Column="25" TopLine="247"/>
-      </Position12>
-      <Position13>
-        <Filename Value="..\Source\APK_Terminator.pas"/>
-        <Caret Line="261" TopLine="247"/>
-      </Position13>
-      <Position14>
-        <Filename Value="..\Source\APK_Terminator.pas"/>
-        <Caret Line="238" TopLine="225"/>
-      </Position14>
-      <Position15>
-        <Filename Value="..\Source\APK_Terminator.pas"/>
-        <Caret Line="260" Column="23" TopLine="249"/>
-      </Position15>
-      <Position16>
-        <Filename Value="..\Source\APK_Terminator.pas"/>
-        <Caret Line="261" TopLine="249"/>
-      </Position16>
-      <Position17>
-        <Filename Value="..\Source\APK_Terminator.pas"/>
-        <Caret Line="238" TopLine="225"/>
-      </Position17>
-      <Position18>
-        <Filename Value="..\Source\APK_Terminator.pas"/>
-        <Caret Line="239" TopLine="225"/>
-      </Position18>
-      <Position19>
-        <Filename Value="..\Source\APK_Terminator.pas"/>
-        <Caret Line="241" TopLine="225"/>
-      </Position19>
-      <Position20>
-        <Filename Value="..\Source\APK_Terminator.pas"/>
-        <Caret Line="261" Column="9" TopLine="246"/>
-      </Position20>
-      <Position21>
-        <Filename Value="..\Source\APK_Terminator.pas"/>
-        <Caret Line="260" TopLine="249"/>
-      </Position21>
-      <Position22>
-        <Filename Value="..\Source\APK_Terminator.pas"/>
-        <Caret Line="262" Column="11" TopLine="250"/>
-      </Position22>
-      <Position23>
-        <Filename Value="..\Source\APK_Terminator.pas"/>
-        <Caret Line="263" TopLine="249"/>
-      </Position23>
-      <Position24>
-        <Filename Value="..\Source\APK_Terminator.pas"/>
-        <Caret Line="261" TopLine="247"/>
-      </Position24>
-      <Position25>
-        <Filename Value="..\Source\APK_Terminator.pas"/>
-        <Caret Line="264" Column="14" TopLine="219"/>
-      </Position25>
-      <Position26>
-        <Filename Value="..\Source\APK_Settings.pas"/>
-        <Caret Line="251" TopLine="235"/>
-      </Position26>
-      <Position27>
-        <Filename Value="..\Source\APK_Settings.pas"/>
-        <Caret Line="258" Column="17" TopLine="241"/>
-      </Position27>
-      <Position28>
-        <Filename Value="..\Source\APK_Manager.pas"/>
-        <Caret Line="106" Column="40" TopLine="95"/>
-      </Position28>
-      <Position29>
-        <Filename Value="..\Source\APK_Manager.pas"/>
-        <Caret Line="43" Column="12" TopLine="34"/>
-      </Position29>
-      <Position30>
-        <Filename Value="..\Source\APK_Manager.pas"/>
-        <Caret Line="108" TopLine="96"/>
-      </Position30>
     </JumpHistory>
   </ProjectSession>
   <Debugging>

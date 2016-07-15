@@ -48,7 +48,7 @@ object fShortcutForm: TfShortcutForm
     Width = 75
     Height = 25
     Caption = 'Cancel'
-    TabOrder = 1
+    TabOrder = 3
     OnClick = btnCancelClick
   end
   object btnAccept: TButton
@@ -66,7 +66,7 @@ object fShortcutForm: TfShortcutForm
     Width = 75
     Height = 25
     Caption = 'New input'
-    TabOrder = 3
+    TabOrder = 1
     OnClick = btnRetryClick
   end
 end

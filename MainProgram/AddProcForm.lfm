@@ -26,9 +26,9 @@ object fAddProcForm: TfAddProcForm
   object lblRunningProcs: TLabel
     Left = 8
     Top = 64
-    Width = 253
+    Width = 94
     Height = 13
-    Caption = 'Running processes (double-click to select a process):'
+    Caption = 'Running processes:'
   end
   object lblLoading: TLabel
     Left = 800
@@ -98,6 +98,8 @@ object fAddProcForm: TfAddProcForm
         Caption = 'Path'
         Width = 140
       end>
+    HideSelection = False
+    MultiSelect = True
     ReadOnly = True
     RowSelect = True
     SmallImages = imglIcons
@@ -149,15 +151,15 @@ object fAddProcForm: TfAddProcForm
   end
   object diaBrowse: TOpenDialog
     Filter = 'Executable binary (*.exe)|*.exe|All files (*.*)|*.*'
-    Left = 64
+    Left = 760
   end
   object tmrLoadingTimer: TTimer
     Enabled = False
     Interval = 500
     OnTimer = tmrLoadingTimerTimer
-    Left = 96
+    Left = 792
   end
   object imglIcons: TImageList
-    Left = 128
+    Left = 824
   end
 end

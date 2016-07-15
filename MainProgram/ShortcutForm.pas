@@ -7,16 +7,17 @@ unit ShortcutForm;
 interface
 
 uses
-  SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ExtCtrls, APK_Keyboard;
+  SysUtils, Variants, Classes, Graphics, Controls, Forms, Dialogs, StdCtrls,
+  ExtCtrls,
+  APK_Keyboard;
 
 type
   TfShortcutForm = class(TForm)
     lblHintText: TLabel;
     pnlShortcutPanel: TPanel;
-    btnCancel: TButton;
-    btnAccept: TButton;
     btnRetry: TButton;
+    btnAccept: TButton;    
+    btnCancel: TButton;
     procedure btnRetryClick(Sender: TObject);
     procedure btnAcceptClick(Sender: TObject);
     procedure btnCancelClick(Sender: TObject);

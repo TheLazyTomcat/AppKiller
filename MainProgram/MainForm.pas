@@ -7,67 +7,86 @@ interface
 {$ENDIF}
 
 uses
-  SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, {$IFNDEF FPC}XPMan,{$ENDIF} StdCtrls, CheckLst, Spin, ExtCtrls, ComCtrls, Menus,
+  Windows, SysUtils, Variants, Classes, Graphics, Controls, Forms, Dialogs,
+  StdCtrls, CheckLst, Spin, ExtCtrls, ComCtrls, Menus,{$IFNDEF FPC}XPMan,{$ENDIF}
   APK_Manager;
 
 type
-
-  { TfMainForm }
-
   TfMainForm = class(TForm)
-   {$IFNDEF FPC}
-    oXPManifest: TXPManifest;
-  {$ENDIF}
     shpHeader: TShape;
+    imgLogo: TImage;
+    lblProgramName: TLabel;
+    lblProgramNameShadow: TLabel;
+    lblProgramVersion: TLabel;
+    lblCopyright: TLabel;
+    bvlHeader: TBevel;
     grbGeneralSettings: TGroupBox;
     cbRunAtStart: TCheckBox;
     bvlGSHorSplit: TBevel;
     cbEndForegroundWnd: TCheckBox;
     cbEndByList: TCheckBox;
     cbEndUnresponsive: TCheckBox;
-    seTimeout: TSpinEdit;
     lblTimeout: TLabel;
+    seTimeout: TSpinEdit;
     grbLists: TGroupBox;
-    clbProcTerm: TCheckListBox;
     lblProcTerm: TLabel;
-    clbProcNoTerm: TCheckListBox;
-    lblProcNoTerm: TLabel;
+    clbProcTerm: TCheckListBox;
     bvlPLVertSplit: TBevel;
-    bvlHeader: TBevel;
+    lblProcNoTerm: TLabel;
+    clbProcNoTerm: TCheckListBox;
+    grbLog: TGroupBox;
+    meLog: TMemo;
     btnChangeShortcut: TButton;
     btnStartTermination: TButton;
     sbStatusBar: TStatusBar;
-    grbLog: TGroupBox;
-    meLog: TMemo;
-    imgLogo: TImage;
-    lblProgramNameShadow: TLabel;
-    lblProgramName: TLabel;
-    lblProgramVersion: TLabel;
-    lblCopyright: TLabel;
-    pmnLists: TPopupMenu;
-    pmniLists_Add: TMenuItem;
-    pmniLists_Remove: TMenuItem;
-    N1: TMenuItem;
-    pmniLists_MarkAll: TMenuItem;
-    pmniLists_UnmarkAll: TMenuItem;
-    pmniLists_Invert: TMenuItem;
-    N2: TMenuItem;
-    pmniLists_MoveUp: TMenuItem;
-    pmniLists_MoveDown: TMenuItem;
+  {$IFNDEF FPC}
+    oXPManifest: TXPManifest;
+  {$ENDIF} 
+    pmnTermList: TPopupMenu;
+    pmniTermList_Add: TMenuItem;
+    pmniTermList_Remove: TMenuItem;
+    TermList_N1: TMenuItem;
+    pmniTermList_MarkAll: TMenuItem;
+    pmniTermList_UnmarkAll: TMenuItem;
+    pmniTermList_Invert: TMenuItem;
+    TermList_N2: TMenuItem;
+    pmniTermList_MoveUp: TMenuItem;
+    pmniTermList_MoveDown: TMenuItem;
+    pmnNoTermList: TPopupMenu;
+    pmniNoTermList_Add: TMenuItem;
+    pmniNoTermList_Remove: TMenuItem;
+    NoTermList_N1: TMenuItem;
+    pmniNoTermList_MarkAll: TMenuItem;
+    pmniNoTermList_UnmarkAll: TMenuItem;
+    pmniNoTermList_Invert: TMenuItem;
+    NoTermList_N2: TMenuItem;
+    pmniNoTermList_MoveUp: TMenuItem;
+    pmniNoTermList_MoveDown: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
-    procedure pmnListsPopup(Sender: TObject);
-    procedure pmniLists_AddClick(Sender: TObject);
-    procedure pmniLists_RemoveClick(Sender: TObject);
-    procedure pmniLists_MarkAllClick(Sender: TObject);
-    procedure pmniLists_UnmarkAllClick(Sender: TObject);
-    procedure pmniLists_InvertClick(Sender: TObject);
-    procedure pmniLists_MoveUpClick(Sender: TObject);
-    procedure pmniLists_MoveDownClick(Sender: TObject);
-    procedure btnChangeShortcutClick(Sender: TObject);
+    procedure clbProcTermDblClick(Sender: TObject);
+    procedure clbProcNoTermDblClick(Sender: TObject);
     procedure btnStartTerminationClick(Sender: TObject);
+    procedure btnChangeShortcutClick(Sender: TObject);
+    procedure pmnTermListPopup(Sender: TObject);
+    procedure pmnTermListClose(Sender: TObject);
+    procedure pmniTermList_AddClick(Sender: TObject);
+    procedure pmniTermList_RemoveClick(Sender: TObject);
+    procedure pmniTermList_MarkAllClick(Sender: TObject);
+    procedure pmniTermList_UnmarkAllClick(Sender: TObject);
+    procedure pmniTermList_InvertClick(Sender: TObject);
+    procedure pmniTermList_MoveUpClick(Sender: TObject);
+    procedure pmniTermList_MoveDownClick(Sender: TObject);
+    procedure pmnNoTermListPopup(Sender: TObject);
+    procedure pmnNoTermListClose(Sender: TObject);
+    procedure pmniNoTermList_AddClick(Sender: TObject);
+    procedure pmniNoTermList_RemoveClick(Sender: TObject);
+    procedure pmniNoTermList_MarkAllClick(Sender: TObject);
+    procedure pmniNoTermList_UnmarkAllClick(Sender: TObject);
+    procedure pmniNoTermList_InvertClick(Sender: TObject);
+    procedure pmniNoTermList_MoveUpClick(Sender: TObject);
+    procedure pmniNoTermList_MoveDownClick(Sender: TObject);
   private
     AppKillerManager:  TAPKManager;
     ForceClose:        Boolean;
@@ -76,7 +95,8 @@ type
     procedure OnSettingsUpdateRequired(Sender: TObject);
     procedure FormToSettings;
     procedure SettingsToForm;
-    procedure ShortcutChange;
+    procedure ShortcutChanged;
+    procedure UpdateListsStyle;
   public
     { Public declarations }
   end;
@@ -100,7 +120,7 @@ procedure TfMainForm.OnTrayMenuItem(Sender: TObject; aAction: Integer);
 begin
 case aAction of
   TI_MI_ACTION_Restore:
-    Show;
+    If not Visible then Show;
   TI_MI_ACTION_Start:
     btnStartTermination.OnClick(nil);
   TI_MI_ACTION_Close:
@@ -181,14 +201,31 @@ try
 finally
   clbProcNoTerm.Items.EndUpdate;
 end;
+UpdateListsStyle;
 end;
 
 //------------------------------------------------------------------------------
 
-procedure TfMainForm.ShortcutChange;
+procedure TfMainForm.ShortcutChanged;
 begin
 sbStatusBar.Panels[0].Text := Format(APKSTR_MW_SB_KeyboardShortcut,[TAPKKeyboard.ShortcutAsText(AppKillerManager.Keyboard.Shortcut)]);
 AppKillerManager.TrayIcon.SetTipText(Format(APKSTR_TI_HintText,[TAPKKeyboard.ShortcutAsText(AppKillerManager.Keyboard.Shortcut)]));
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TfMainForm.UpdateListsStyle;
+begin
+{$IFNDEF FPC}
+If clbProcTerm.Count > 0 then
+  clbProcTerm.ControlStyle := clbProcTerm.ControlStyle - [csClickEvents]
+else
+  clbProcTerm.ControlStyle := clbProcTerm.ControlStyle + [csClickEvents];
+If clbProcNoTerm.Count > 0 then
+  clbProcNoTerm.ControlStyle := clbProcNoTerm.ControlStyle - [csClickEvents]
+else
+  clbProcNoTerm.ControlStyle := clbProcNoTerm.ControlStyle + [csClickEvents];
+{$ENDIF}
 end;
 
 //==============================================================================
@@ -203,22 +240,22 @@ lblProgramName.Caption := APKSTR_MW_HD_Title;
 lblProgramNameShadow.Caption := APKSTR_MW_HD_Title;
 lblProgramVersion.Caption := APKSTR_MW_HD_Version;
 lblCopyright.Caption := APKSTR_MW_HD_Copyright;
+// Set menu shortcuts
+pmniTermList_MoveUp.ShortCut := Shortcut(VK_UP,[ssShift]);
+pmniTermList_MoveDown.ShortCut := Shortcut(VK_DOWN,[ssShift]);
+pmniNoTermList_MoveUp.ShortCut := Shortcut(VK_UP,[ssShift]);
+pmniNoTermList_MoveDown.ShortCut := Shortcut(VK_DOWN,[ssShift]);
 // Initialize manager
 AppKillerManager := TAPKManager.Create;
 AppKillerManager.OnSettingsUpdateRequired := OnSettingsUpdateRequired;
 AppKillerManager.TrayIcon.OnPopupMenuItem := OnTrayMenuItem;
 {$IFDEF FPC}
-(*
- [FPC]
- It seems object TMemo.Lines is recreated later, meaning what is assigned at
- this time will not work.
-*)
 InitializeWnd;
 {$ENDIF}
 AppKillerManager.Log.ExternalLogAdd(meLog.Lines);
 AppKillerManager.Initialize;
 SettingsToForm;
-ShortcutChange;
+ShortcutChanged;
 end;
 
 //------------------------------------------------------------------------------
@@ -246,100 +283,16 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TfMainForm.pmnListsPopup(Sender: TObject);
-var
-  PopupList:  TCheckListBox;
+procedure TfMainForm.clbProcTermDblClick(Sender: TObject);
 begin
-PopupList := (Sender as TPopupMenu).PopupComponent as TCheckListBox;
-pmniLists_Remove.Enabled := PopupList.ItemIndex >= 0;
-pmniLists_MarkAll.Enabled := PopupList.Count > 0;
-pmniLists_UnmarkAll.Enabled := PopupList.Count > 0;
-pmniLists_Invert.Enabled := PopupList.Count > 0;
-pmniLists_MoveUp.Enabled := PopupList.ItemIndex > 0;
-pmniLists_MoveDown.Enabled := (PopupList.ItemIndex >= 0) and (PopupList.ItemIndex < Pred(PopupList.Count));
+pmniTermList_Add.OnClick(nil);
 end;
 
 //------------------------------------------------------------------------------
 
-procedure TfMainForm.pmniLists_AddClick(Sender: TObject);
+procedure TfMainForm.clbProcNoTermDblClick(Sender: TObject);
 begin
-If fAddProcForm.ShowAsPrompt then
-  case ((Sender as TMenuItem).GetParentMenu as TPopupMenu).PopupComponent.Tag of
-    1:  clbProcTerm.Checked[clbProcTerm.Items.Add(fAddProcForm.leProcessName.Text)] := True;
-    2:  clbProcNoTerm.Checked[clbProcNoTerm.Items.Add(fAddProcForm.leProcessName.Text)] := True;
-  end;
-end;
-
-//------------------------------------------------------------------------------
-
-procedure TfMainForm.pmniLists_RemoveClick(Sender: TObject);
-begin
-case ((Sender as TMenuItem).GetParentMenu as TPopupMenu).PopupComponent.Tag of
-  1:  clbProcTerm.Items.Delete(clbProcTerm.ItemIndex); 
-  2:  clbProcNoTerm.Items.Delete(clbProcTerm.ItemIndex);
-end;
-end;
-
-//------------------------------------------------------------------------------
-
-procedure TfMainForm.pmniLists_MarkAllClick(Sender: TObject);
-var
-  i:  Integer;
-begin
-case ((Sender as TMenuItem).GetParentMenu as TPopupMenu).PopupComponent.Tag of
-  1:  For i := 0 to Pred(clbProcTerm.Count) do
-        clbProcTerm.Checked[i] := True;
-  2:  For i := 0 to Pred(clbProcNoTerm.Count) do
-        clbProcNoTerm.Checked[i] := True;
-end;
-end;
-
-//------------------------------------------------------------------------------
-
-procedure TfMainForm.pmniLists_UnmarkAllClick(Sender: TObject);
-var
-  i:  Integer;
-begin
-case ((Sender as TMenuItem).GetParentMenu as TPopupMenu).PopupComponent.Tag of
-  1:  For i := 0 to Pred(clbProcTerm.Count) do
-        clbProcTerm.Checked[i] := False;
-  2:  For i := 0 to Pred(clbProcNoTerm.Count) do
-        clbProcNoTerm.Checked[i] := False;
-end;
-end;
-
-//------------------------------------------------------------------------------
-
-procedure TfMainForm.pmniLists_InvertClick(Sender: TObject);
-var
-  i:  Integer;
-begin
-case ((Sender as TMenuItem).GetParentMenu as TPopupMenu).PopupComponent.Tag of
-  1:  For i := 0 to Pred(clbProcTerm.Count) do
-        clbProcTerm.Checked[i] := not clbProcTerm.Checked[i];
-  2:  For i := 0 to Pred(clbProcNoTerm.Count) do
-        clbProcNoTerm.Checked[i] := not clbProcNoTerm.Checked[i];
-end;
-end;
- 
-//------------------------------------------------------------------------------
-
-procedure TfMainForm.pmniLists_MoveUpClick(Sender: TObject);
-begin
-case ((Sender as TMenuItem).GetParentMenu as TPopupMenu).PopupComponent.Tag of
-  1:  clbProcTerm.Items.Exchange(clbProcTerm.ItemIndex - 1,clbProcTerm.ItemIndex);
-  2:  clbProcNoTerm.Items.Exchange(clbProcTerm.ItemIndex - 1,clbProcTerm.ItemIndex);
-end;
-end;
-
-//------------------------------------------------------------------------------
-
-procedure TfMainForm.pmniLists_MoveDownClick(Sender: TObject);
-begin
-case ((Sender as TMenuItem).GetParentMenu as TPopupMenu).PopupComponent.Tag of
-  1:  clbProcTerm.Items.Exchange(clbProcTerm.ItemIndex + 1,clbProcTerm.ItemIndex);
-  2:  clbProcNoTerm.Items.Exchange(clbProcTerm.ItemIndex + 1,clbProcTerm.ItemIndex);
-end;
+pmniNoTermList_Add.OnClick(nil);
 end;
 
 //------------------------------------------------------------------------------
@@ -359,11 +312,212 @@ try
   If fShortcutForm.ShowAsPrompt(AppKillerManager.Keyboard) then
     begin
       AppKillerManager.Keyboard.Shortcut := fShortcutForm.Shortcut;
-      ShortcutChange;
+      ShortcutChanged;
     end;
 finally
   AppKillerManager.Keyboard.Mode := kmIntercept;
 end;
 end;
+
+//------------------------------------------------------------------------------
+
+procedure TfMainForm.pmnTermListPopup(Sender: TObject);
+begin
+pmniTermList_Remove.Enabled := clbProcTerm.ItemIndex >= 0;
+pmniTermList_MarkAll.Enabled := clbProcTerm.Count > 0;
+pmniTermList_UnmarkAll.Enabled := clbProcTerm.Count > 0;
+pmniTermList_Invert.Enabled := clbProcTerm.Count > 0;
+pmniTermList_MoveUp.Enabled := clbProcTerm.ItemIndex > 0;
+pmniTermList_MoveDown.Enabled := (clbProcTerm.ItemIndex >= 0) and (clbProcTerm.ItemIndex < Pred(clbProcTerm.Count));
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TfMainForm.pmnTermListClose(Sender: TObject);
+var
+  i:  Integer;
+begin
+For i := 0 to Pred(pmnTermList.Items.Count) do
+  pmnTermList.Items[i].Enabled := True;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TfMainForm.pmniTermList_AddClick(Sender: TObject);
+var
+  i:  Integer;
+begin
+If fAddProcForm.ShowAsPrompt then
+  For i := 0 to Pred(fAddProcForm.SelectedProcesses.Count) do
+    If (fAddProcForm.SelectedProcesses[i] <> '') and (clbProcTerm.Items.IndexOf(fAddProcForm.SelectedProcesses[i]) < 0) then
+      clbProcTerm.Checked[clbProcTerm.Items.Add(fAddProcForm.SelectedProcesses[i])] := True;
+UpdateListsStyle;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TfMainForm.pmniTermList_RemoveClick(Sender: TObject);
+begin
+If clbProcTerm.ItemIndex >= 0 then
+  clbProcTerm.Items.Delete(clbProcTerm.ItemIndex);
+UpdateListsStyle;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TfMainForm.pmniTermList_MarkAllClick(Sender: TObject);
+var
+  i:  Integer;
+begin
+For i := 0 to Pred(clbProcTerm.Count) do
+  clbProcTerm.Checked[i] := True;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TfMainForm.pmniTermList_UnmarkAllClick(Sender: TObject);
+var
+  i:  Integer;
+begin
+For i := 0 to Pred(clbProcTerm.Count) do
+  clbProcTerm.Checked[i] := False;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TfMainForm.pmniTermList_InvertClick(Sender: TObject);
+var
+  i:  Integer;
+begin
+For i := 0 to Pred(clbProcTerm.Count) do
+  clbProcTerm.Checked[i] := not clbProcTerm.Checked[i];
+end;
+ 
+//------------------------------------------------------------------------------
+
+procedure TfMainForm.pmniTermList_MoveUpClick(Sender: TObject);
+begin
+If clbProcTerm.ItemIndex > 0 then
+  begin
+    clbProcTerm.Items.Exchange(clbProcTerm.ItemIndex - 1,clbProcTerm.ItemIndex);
+  {$IFDEF FPC}
+    clbProcTerm.ItemIndex := clbProcTerm.ItemIndex - 1;
+  {$ENDIF}
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TfMainForm.pmniTermList_MoveDownClick(Sender: TObject);
+begin
+If (clbProcTerm.ItemIndex >= 0) and (clbProcTerm.ItemIndex < Pred(clbProcTerm.Count)) then
+  begin
+    clbProcTerm.Items.Exchange(clbProcTerm.ItemIndex + 1,clbProcTerm.ItemIndex);
+  {$IFDEF FPC}
+    clbProcTerm.ItemIndex := clbProcTerm.ItemIndex + 1;
+  {$ENDIF}
+  end;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TfMainForm.pmnNoTermListPopup(Sender: TObject);
+begin
+pmniNoTermList_Remove.Enabled := clbProcNoTerm.ItemIndex >= 0;
+pmniNoTermList_MarkAll.Enabled := clbProcNoTerm.Count > 0;
+pmniNoTermList_UnmarkAll.Enabled := clbProcNoTerm.Count > 0;
+pmniNoTermList_Invert.Enabled := clbProcNoTerm.Count > 0;
+pmniNoTermList_MoveUp.Enabled := clbProcNoTerm.ItemIndex > 0;
+pmniNoTermList_MoveDown.Enabled := (clbProcNoTerm.ItemIndex >= 0) and (clbProcNoTerm.ItemIndex < Pred(clbProcNoTerm.Count));
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TfMainForm.pmnNoTermListClose(Sender: TObject);
+var
+  i:  Integer;
+begin
+For i := 0 to Pred(pmnNoTermList.Items.Count) do
+  pmnNoTermList.Items[i].Enabled := True;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TfMainForm.pmniNoTermList_AddClick(Sender: TObject);
+var
+  i:  Integer;
+begin
+If fAddProcForm.ShowAsPrompt then
+  For i := 0 to Pred(fAddProcForm.SelectedProcesses.Count) do
+    If (fAddProcForm.SelectedProcesses[i] <> '') and (clbProcNoTerm.Items.IndexOf(fAddProcForm.SelectedProcesses[i]) < 0) then
+      clbProcNoTerm.Checked[clbProcNoTerm.Items.Add(fAddProcForm.SelectedProcesses[i])] := True;
+UpdateListsStyle;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TfMainForm.pmniNoTermList_RemoveClick(Sender: TObject);
+begin
+If clbProcNoTerm.ItemIndex >= 0 then
+  clbProcNoTerm.Items.Delete(clbProcNoTerm.ItemIndex);
+UpdateListsStyle;  
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TfMainForm.pmniNoTermList_MarkAllClick(Sender: TObject);
+var
+  i:  Integer;
+begin
+For i := 0 to Pred(clbProcNoTerm.Count) do
+  clbProcNoTerm.Checked[i] := True;
+end;
+ 
+//------------------------------------------------------------------------------
+
+procedure TfMainForm.pmniNoTermList_UnmarkAllClick(Sender: TObject);
+var
+  i:  Integer;
+begin
+For i := 0 to Pred(clbProcNoTerm.Count) do
+  clbProcNoTerm.Checked[i] := False;
+end;
+ 
+//------------------------------------------------------------------------------
+
+procedure TfMainForm.pmniNoTermList_InvertClick(Sender: TObject);
+var
+  i:  Integer;
+begin
+For i := 0 to Pred(clbProcNoTerm.Count) do
+  clbProcNoTerm.Checked[i] := not clbProcNoTerm.Checked[i];
+end;
+ 
+//------------------------------------------------------------------------------
+
+procedure TfMainForm.pmniNoTermList_MoveUpClick(Sender: TObject);
+begin
+If clbProcNoTerm.ItemIndex > 0 then
+  begin
+    clbProcNoTerm.Items.Exchange(clbProcNoTerm.ItemIndex - 1,clbProcNoTerm.ItemIndex);
+  {$IFDEF FPC}
+    clbProcNoTerm.ItemIndex := clbProcNoTerm.ItemIndex - 1;
+  {$ENDIF}
+  end;
+end;
+ 
+//------------------------------------------------------------------------------
+
+procedure TfMainForm.pmniNoTermList_MoveDownClick(Sender: TObject);
+begin
+If (clbProcNoTerm.ItemIndex >= 0) and (clbProcNoTerm.ItemIndex < Pred(clbProcNoTerm.Count)) then
+  begin
+    clbProcNoTerm.Items.Exchange(clbProcNoTerm.ItemIndex + 1,clbProcNoTerm.ItemIndex);
+  {$IFDEF FPC}
+    clbProcNoTerm.ItemIndex := clbProcNoTerm.ItemIndex + 1;
+  {$ENDIF}
+  end;
+end;
+ 
 
 end.
