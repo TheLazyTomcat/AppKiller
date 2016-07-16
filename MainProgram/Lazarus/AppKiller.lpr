@@ -1,3 +1,10 @@
+{-------------------------------------------------------------------------------
+
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+-------------------------------------------------------------------------------}
 program AppKiller;
 
 {$mode objfpc}{$H+}
@@ -10,14 +17,14 @@ uses
   AddProcForm,
   ShortcutForm,
 
-  APK_InstanceControl,
+  APK_System,
   APK_Strings,
+  APK_InstanceControl,
+  APK_TrayIcon,
+  APK_Settings,
   APK_Keyboard,
   APK_ProcEnum,
-  APK_Settings,
-  APK_System,
   APK_Terminator,
-  APK_TrayIcon,
   APK_Manager;
 
 {$R *.res}

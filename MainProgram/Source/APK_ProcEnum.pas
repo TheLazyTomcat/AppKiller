@@ -1,3 +1,10 @@
+{-------------------------------------------------------------------------------
+
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+-------------------------------------------------------------------------------}
 unit APK_ProcEnum;
 
 {$INCLUDE APK_Defs.inc}
@@ -6,6 +13,12 @@ interface
 
 uses
   Windows, Graphics, Classes;
+
+{==============================================================================}
+{------------------------------------------------------------------------------}
+{                             TAPKProcessEnumerator                            }
+{------------------------------------------------------------------------------}
+{==============================================================================}
 
 type
   TAPKProcessBits = (pbUnknown,pb32bit,pb64bit);
@@ -24,6 +37,10 @@ type
   TAPKProcessList = array of TAPKProcessEntry;
 
   TAPKEnumStage = (esReady,esEnumerating,esDone);
+
+{==============================================================================}
+{   TAPKProcessEnumerator - declaration                                        }
+{==============================================================================}
 
   TAPKProcessEnumerator = class(TObject)
   private
@@ -52,13 +69,23 @@ type
     property IconBackground: TColor read fIconBackground write fIconBackground;
   end;
 
+{==============================================================================}
+{   Auxiliary functions - declaration                                          }
+{==============================================================================}
+
   Function ProcessBitsToString(ProcessBits: TAPKProcessBits): String;
 
 implementation
 
 uses
-  SysUtils,{$IFDEF FPC} jwaTlHelp32{$ELSE} TlHelp32{$ENDIF}, ShellAPI, StrUtils,
-  WinFileInfo {$IF Defined(FPC) and not Defined(Unicode)}, LazUTF8{$IFEND};
+  SysUtils, StrUtils, {$IFDEF FPC} jwaTlHelp32{$ELSE} TlHelp32{$ENDIF},
+  WinFileInfo,
+  APK_System
+  {$IF Defined(FPC) and not Defined(Unicode)}, LazUTF8{$IFEND};
+
+{==============================================================================}
+{   Auxiliary functions - implementations                                      }
+{==============================================================================}
 
 Function ProcessBitsToString(ProcessBits: TAPKProcessBits): String;
 begin
@@ -71,6 +98,12 @@ else
 end;
 end;
 
+{==============================================================================}
+{------------------------------------------------------------------------------}
+{                         TAPKProcessEnumeratorInternal                        }
+{------------------------------------------------------------------------------}
+{==============================================================================}
+
 type
   TAPKDeviceEntry = record
     DrivePath:  String;
@@ -79,27 +112,7 @@ type
 
   TAPKDevicesList = array of TAPKDeviceEntry;
 
-{$IF not Declared(PHICON)}
-  PHICON = ^HICON;
-{$IFEND}
-
-{$IF not Declared(GetProcessImageFileName)}
-Function GetProcessImageFileNameA(hProcess: THandle; lpImageFileName: LPSTR; nSize: DWORD): DWORD; stdcall; external 'psapi.dll';
-Function GetProcessImageFileNameW(hProcess: THandle; lpImageFileName: LPWSTR; nSize: DWORD): DWORD; stdcall; external 'psapi.dll';
-Function GetProcessImageFileName(hProcess: THandle; lpImageFileName: LPTSTR; nSize: DWORD): DWORD; stdcall; external 'psapi.dll'
- name {$IFDEF Unicode}'GetProcessImageFileNameW'{$ELSE}'GetProcessImageFileNameA'{$ENDIF};
-{$IFEND}
-
-Function ExtractIconExA(lpszFile: LPCSTR; nIconIndex: Integer; phiconLarge: PHICON; phiconSmall: PHICON; nIcons: UINT): UINT; stdcall; external shell32;
-Function ExtractIconExW(lpszFile: LPCWSTR; nIconIndex: Integer; phiconLarge: PHICON; phiconSmall: PHICON; nIcons: UINT): UINT; stdcall; external shell32;
-Function ExtractIconEx(lpszFile: LPCTSTR; nIconIndex: Integer; phiconLarge: PHICON; phiconSmall: PHICON; nIcons: UINT): UINT; stdcall; external shell32
- name {$IFDEF Unicode}'ExtractIconExW'{$ELSE}'ExtractIconExA'{$ENDIF};
-
 const
-{$IF not Declared(PROCESS_QUERY_LIMITED_INFORMATION)}
-  PROCESS_QUERY_LIMITED_INFORMATION = $00001000;
-{$IFEND}
-
   IPE_RUNNING = 0;
   IPE_STOPPED = -1;
 
@@ -108,7 +121,9 @@ type
   TWow64DisableWow64FsRedirection = Function(OldValue: PPointer): BOOL; stdcall;
   TWow64RevertWow64FsRedirection = Function(OldValue: Pointer): BOOL; stdcall;
 
-//==============================================================================
+{==============================================================================}
+{   TAPKProcessEnumeratorInternal - declaration                                }
+{==============================================================================}
 
   TAPKProcessEnumeratorInternal = class(TObject)
   private
@@ -145,6 +160,16 @@ type
     property OnEnumerationDone: TNotifyEvent read fOnEnumerationDone write fOnEnumerationDone;
   end;
 
+{==============================================================================}
+{------------------------------------------------------------------------------}
+{                          TAPKProcessEnumeratorThread                         }
+{------------------------------------------------------------------------------}
+{==============================================================================}
+
+{==============================================================================}
+{   TAPKProcessEnumeratorThread - declaration                                  }
+{==============================================================================}
+
   TAPKProcessEnumeratorThread = class(TThread)
   private
     fEnumerator:        TAPKProcessEnumeratorInternal;
@@ -164,19 +189,33 @@ type
   end;
 
 
-//==============================================================================
+{==============================================================================}
+{------------------------------------------------------------------------------}
+{                         TAPKProcessEnumeratorInternal                        }
+{------------------------------------------------------------------------------}
+{==============================================================================}
+
+{==============================================================================}
+{   TAPKProcessEnumeratorInternal - implementation                             }
+{==============================================================================}
+
+{------------------------------------------------------------------------------}
+{   TAPKProcessEnumeratorInternal - private methods                            }
+{------------------------------------------------------------------------------}
 
 Function TAPKProcessEnumeratorInternal.GetEnumerationStopped: Boolean;
 begin
 Result := InterlockedExchangeAdd(fEnumerationStopped,0) <> IPE_RUNNING;
 end;
 
-//------------------------------------------------------------------------------
+{------------------------------------------------------------------------------}
+{   TAPKProcessEnumeratorInternal - protectec methods                          }
+{------------------------------------------------------------------------------}
 
 procedure TAPKProcessEnumeratorInternal.InitForWin64;
 var
   ModuleHandle: THandle;
-{$IFNDEF x64}
+{$IFNDEF 64bit}
   ResultValue:  BOOL;
 {$ENDIF}
 begin
@@ -185,7 +224,7 @@ ModuleHandle := GetModuleHandle('kernel32.dll');
 If ModuleHandle <> 0 then
   begin
     fIsWoW64ProcessProc := GetProcAddress(ModuleHandle,'IsWow64Process');
-  {$IFDEF x64}
+  {$IFDEF 64bit}
     fRunningInWin64 := True;
   {$ELSE}
     If Assigned(fIsWoW64ProcessProc) then
@@ -412,7 +451,9 @@ If ProcessHandle <> 0 then
 else ProcessEntry.LimitedAccess := True;
 end;
 
-//==============================================================================
+{------------------------------------------------------------------------------}
+{   TAPKProcessEnumeratorInternal - public methods                             }
+{------------------------------------------------------------------------------}
 
 constructor TAPKProcessEnumeratorInternal.Create(IconBackground: TColor; ObtainProcessImageInfo: Boolean = True);
 begin
@@ -508,7 +549,20 @@ begin
 InterlockedExchange(fEnumerationStopped,IPE_STOPPED);
 end;
 
-//==============================================================================
+
+{==============================================================================}
+{------------------------------------------------------------------------------}
+{                          TAPKProcessEnumeratorThread                         }
+{------------------------------------------------------------------------------}
+{==============================================================================}
+
+{==============================================================================}
+{   TAPKProcessEnumeratorThread - declaration                                  }
+{==============================================================================}
+
+{------------------------------------------------------------------------------}
+{   TAPKProcessEnumeratorThread - protected methods                            }
+{------------------------------------------------------------------------------}
 
 procedure TAPKProcessEnumeratorThread.sync_DoEnumerationDone;
 begin
@@ -529,7 +583,9 @@ begin
 fEnumerator.Enumerate;
 end;
 
-//------------------------------------------------------------------------------
+{------------------------------------------------------------------------------}
+{   TAPKProcessEnumeratorThread - public methods                               }
+{------------------------------------------------------------------------------}
 
 constructor TAPKProcessEnumeratorThread.Create(IconBackground: TColor; ObtainProcessImageInfo: Boolean = True);
 begin
@@ -574,7 +630,19 @@ fEnumerator.StopEnumeration;
 end;
 
 
-//==============================================================================
+{==============================================================================}
+{------------------------------------------------------------------------------}
+{                             TAPKProcessEnumerator                            }
+{------------------------------------------------------------------------------}
+{==============================================================================}
+
+{==============================================================================}
+{   TAPKProcessEnumerator - declaration                                        }
+{==============================================================================}
+
+{------------------------------------------------------------------------------}
+{   TAPKProcessEnumerator - private methods                                    }
+{------------------------------------------------------------------------------}
 
 Function TAPKProcessEnumerator.GetProcessCount: Integer;
 begin
@@ -591,7 +659,9 @@ else
   raise Exception.CreateFmt('TAPKProcessEnumerator.GetProcess: Index (%d) out of bounds.',[Index]);
 end;
 
-//==============================================================================
+{------------------------------------------------------------------------------}
+{   TAPKProcessEnumerator - protected methods                                  }
+{------------------------------------------------------------------------------}
 
 procedure TAPKProcessEnumerator.ThreadEnumDoneHandler(Sender: TObject);
 begin
@@ -613,7 +683,9 @@ If Assigned(fEnumThread) then
   end;
 end;
 
-//==============================================================================
+{------------------------------------------------------------------------------}
+{   TAPKProcessEnumerator - public methods                                     }
+{------------------------------------------------------------------------------}
 
 constructor TAPKProcessEnumerator.Create;
 begin

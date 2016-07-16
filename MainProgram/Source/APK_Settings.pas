@@ -1,3 +1,10 @@
+{-------------------------------------------------------------------------------
+
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+-------------------------------------------------------------------------------}
 unit APK_Settings;
 
 {$INCLUDE APK_Defs.inc}
@@ -7,6 +14,12 @@ interface
 uses
   AuxTypes,
   APK_Keyboard;
+
+{==============================================================================}
+{------------------------------------------------------------------------------}
+{                                 TAPKSettings                                 }
+{------------------------------------------------------------------------------}
+{==============================================================================}
 
 type
   TAPKProcessListItem = record
@@ -32,6 +45,10 @@ type
   end;
   PAPKSettingsStruct = ^TAPKSettingsStruct;
 
+{==============================================================================}
+{   TAPKSettings - declaration                                                 }
+{==============================================================================}
+
   TAPKSettings = class(TObject)
   private
     fSettings:  TAPKSettingsStruct;
@@ -55,8 +72,15 @@ type
 implementation
 
 uses
-  Windows, SysUtils, IniFiles, DefRegistry, RawInputKeyboard
+  Windows, SysUtils, IniFiles,
+  DefRegistry, RawInputKeyboard
   {$IF Defined(FPC) and not Defined(Unicode)}, LazUTF8{$IFEND};
+
+{==============================================================================}
+{------------------------------------------------------------------------------}
+{                                 TAPKSettings                                 }
+{------------------------------------------------------------------------------}
+{==============================================================================}
 
 const
   DefaultSettings: TAPKSettingsStruct = (
@@ -70,14 +94,22 @@ const
     ProcListTerminate:      nil;
     ProcListNeverTerminate: nil);
 
-//==============================================================================
+{==============================================================================}
+{   TAPKSettings - implementation                                              }
+{==============================================================================}
+
+{------------------------------------------------------------------------------}
+{   TAPKSettings - private methods                                             }
+{------------------------------------------------------------------------------}
 
 Function TAPKSettings.GetSettingsPtr: PAPKSettingsStruct;
 begin
 Result := Addr(fSettings);
 end;
 
-//==============================================================================
+{------------------------------------------------------------------------------}
+{   TAPKSettings - protected methods                                           }
+{------------------------------------------------------------------------------}
 
 procedure TAPKSettings.RunAtSystemStart(Activate: Boolean);
 var
@@ -103,7 +135,9 @@ finally
 end;
 end;
 
-//==============================================================================
+{------------------------------------------------------------------------------}
+{   TAPKSettings - public methods                                              }
+{------------------------------------------------------------------------------}
 
 constructor TAPKSettings.Create;
 begin

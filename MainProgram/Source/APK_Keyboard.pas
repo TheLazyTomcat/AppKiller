@@ -1,3 +1,10 @@
+{-------------------------------------------------------------------------------
+
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+-------------------------------------------------------------------------------}
 unit APK_Keyboard;
 
 {$INCLUDE APK_Defs.inc}
@@ -9,6 +16,12 @@ uses
   WinRawInput,
   RawInputManager, RawInputKeyboard;
 
+{==============================================================================}
+{------------------------------------------------------------------------------}
+{                                 TAPKKeyboard                                 }
+{------------------------------------------------------------------------------}
+{==============================================================================}
+
 type
   TAPKShortcut = record
     MainKey:      USHORT;
@@ -18,6 +31,10 @@ type
   TAPKShortcutEvent = procedure(Sender: TObject; Shortcut: TAPKShortcut) of object;
 
   TAPKKeyboardMode = (kmNone,kmIntercept,kmSelect);
+
+{==============================================================================}
+{   TAPKKeyboard - declaration                                                 }
+{==============================================================================}
 
   TAPKKeyboard = class(TOBject)
   private
@@ -45,10 +62,24 @@ implementation
 uses
   Windows;
 
+{==============================================================================}
+{------------------------------------------------------------------------------}
+{                                 TAPKKeyboard                                 }
+{------------------------------------------------------------------------------}
+{==============================================================================}
+
 const
   DefaultShortcut: TAPKShortcut = (
     MainKey:      VK_CANCEL;
     ShiftStates:  [kssControl,kssAlt]);
+
+{==============================================================================}
+{   TAPKKeyboard - implementation                                              }
+{==============================================================================}
+
+{------------------------------------------------------------------------------}
+{   TAPKKeyboard - protected methods                                           }
+{------------------------------------------------------------------------------}
 
 procedure TAPKKeyboard.KeyEventHandler(Sender: TObject; VKey: USHORT);
 var
@@ -69,7 +100,9 @@ case fMode of
 end;
 end;
 
-//==============================================================================
+{------------------------------------------------------------------------------}
+{   TAPKKeyboard - public methods                                              }
+{------------------------------------------------------------------------------}
 
 class Function TAPKKeyboard.ShortcutAsText(Shortcut: TAPKShortcut): String;
 begin

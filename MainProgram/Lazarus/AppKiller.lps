@@ -8,8 +8,8 @@
       <Unit0>
         <Filename Value="AppKiller.lpr"/>
         <IsPartOfProject Value="True"/>
-        <TopLine Value="16"/>
-        <CursorPos X="16" Y="11"/>
+        <TopLine Value="13"/>
+        <CursorPos X="18" Y="27"/>
         <UsageCount Value="33"/>
         <Loaded Value="True"/>
       </Unit0>
@@ -54,10 +54,12 @@
       <Unit6>
         <Filename Value="..\Source\APK_ProcEnum.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="242"/>
-        <CursorPos X="4" Y="254"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="68"/>
+        <CursorPos X="23" Y="81"/>
         <UsageCount Value="33"/>
+        <Loaded Value="True"/>
       </Unit6>
       <Unit7>
         <Filename Value="..\Source\APK_Settings.pas"/>
@@ -70,8 +72,11 @@
       <Unit8>
         <Filename Value="..\Source\APK_System.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="-1"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="19"/>
+        <CursorPos X="6" Y="22"/>
         <UsageCount Value="33"/>
+        <Loaded Value="True"/>
       </Unit8>
       <Unit9>
         <Filename Value="..\Source\APK_Terminator.pas"/>
@@ -95,7 +100,7 @@
         <ComponentName Value="fAddProcForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="4"/>
         <CursorPos X="42" Y="11"/>
         <UsageCount Value="33"/>
         <Loaded Value="True"/>
@@ -106,9 +111,7 @@
         <ComponentName Value="fShortcutForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <EditorIndex Value="3"/>
-        <TopLine Value="16"/>
-        <CursorPos X="3" Y="10"/>
+        <EditorIndex Value="5"/>
         <UsageCount Value="33"/>
         <Loaded Value="True"/>
       </Unit12>
@@ -127,8 +130,7 @@
         <ComponentName Value="fMainForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <IsVisibleTab Value="True"/>
-        <EditorIndex Value="1"/>
+        <EditorIndex Value="3"/>
         <CursorPos Y="15"/>
         <UsageCount Value="14"/>
         <Loaded Value="True"/>
@@ -273,27 +275,26 @@
       </Position1>
       <Position2>
         <Filename Value="..\MainForm.pas"/>
-        <Caret Line="238" Column="52" TopLine="322"/>
+        <Caret Line="347" TopLine="321"/>
       </Position2>
       <Position3>
         <Filename Value="..\MainForm.pas"/>
-        <Caret Line="347" TopLine="321"/>
+        <Caret Line="332" Column="5" TopLine="310"/>
       </Position3>
       <Position4>
         <Filename Value="..\MainForm.pas"/>
-        <Caret Line="332" Column="5" TopLine="310"/>
+        <Caret Line="334" Column="44" TopLine="321"/>
       </Position4>
       <Position5>
         <Filename Value="..\MainForm.pas"/>
-        <Caret Line="45" Column="16" TopLine="301"/>
+        <Caret Line="329" Column="15" TopLine="324"/>
       </Position5>
       <Position6>
-        <Filename Value="..\MainForm.pas"/>
-        <Caret Line="334" Column="44" TopLine="321"/>
+        <Filename Value="..\Source\APK_System.pas"/>
       </Position6>
       <Position7>
-        <Filename Value="..\MainForm.pas"/>
-        <Caret Line="329" Column="15" TopLine="324"/>
+        <Filename Value="..\Source\APK_ProcEnum.pas"/>
+        <Caret Line="254" Column="4" TopLine="242"/>
       </Position7>
     </JumpHistory>
   </ProjectSession>

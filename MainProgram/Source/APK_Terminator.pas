@@ -1,3 +1,10 @@
+{-------------------------------------------------------------------------------
+
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+-------------------------------------------------------------------------------}
 unit APK_Terminator;
 
 {$INCLUDE APK_Defs.inc}
@@ -8,9 +15,57 @@ uses
   Classes,
   APK_Settings;
 
+{==============================================================================}
+{------------------------------------------------------------------------------}
+{                                TAPKTerminator                                }
+{------------------------------------------------------------------------------}
+{==============================================================================}
+
 type
   TAPKLogWriteEvent = procedure(Sender: TObject; const Text: String) of object;
 
+  TAPKTerminatorState = (tsReady,tsWorking);
+
+{==============================================================================}
+{   TAPKTerminator - declaration                                               }
+{==============================================================================}
+
+  TAPKTerminator = class(TObject)
+  private
+    fState:       TAPKTerminatorState;
+    fWorkThread:  TThread;
+    fOnLogWrite:  TAPKLogWriteEvent;
+  protected
+    procedure ThreadEndHandler(Sender: TObject); virtual;
+    procedure LogWriteHandler(Sender: TObject; const Text: String); virtual;
+    procedure FreeWorkingThread; virtual;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    Function StartTermination(Settings: TAPKSettings): Boolean; virtual;
+  published
+    property State: TAPKTerminatorState read fState;
+    property OnLogWrite: TAPKLogWriteEvent read fOnLogWrite write fOnLogWrite;
+  end;
+
+implementation
+
+uses
+  Windows, Messages, SysUtils, {$IFDEF FPC}jwaPSApi{$ELSE}PSApi{$ENDIF}, 
+  APK_ProcEnum
+  {$IF Defined(FPC) and not Defined(Unicode)}, LazUTF8{$IFEND};
+
+{==============================================================================}
+{------------------------------------------------------------------------------}
+{                             TAPKTerminatorThread                             }
+{------------------------------------------------------------------------------}
+{==============================================================================}
+
+{==============================================================================}
+{   TAPKTerminatorThread - declaration                                         }
+{==============================================================================}
+
+type
   TAPKTerminatorThread = class(TThread)
   private
     fTerminatingList: TStringList;
@@ -39,32 +94,13 @@ type
     property OnLogWrite: TAPKLogWriteEvent read fOnLogWrite write fOnLogWrite;
   end;
 
-  TAPKTerminatorState = (tsReady,tsWorking);
+{==============================================================================}
+{   TAPKTerminatorThread - implementation                                      }
+{==============================================================================}
 
-  TAPKTerminator = class(TObject)
-  private
-    fState:       TAPKTerminatorState;
-    fWorkThread:  TAPKTerminatorThread;
-    fOnLogWrite:  TAPKLogWriteEvent;
-  protected
-    procedure ThreadEndHandler(Sender: TObject); virtual;
-    procedure LogWriteHandler(Sender: TObject; const Text: String); virtual;
-    procedure FreeWorkingThread; virtual;
-  public
-    constructor Create;
-    destructor Destroy; override;
-    Function StartTermination(Settings: TAPKSettings): Boolean; virtual;
-  published
-    property State: TAPKTerminatorState read fState;
-    property OnLogWrite: TAPKLogWriteEvent read fOnLogWrite write fOnLogWrite;
-  end;
-
-implementation
-
-uses
-  Windows, Messages, {$IFDEF FPC}jwaPSApi{$ELSE}PSApi{$ENDIF}, SysUtils,
-  APK_ProcEnum
-  {$IF Defined(FPC) and not Defined(Unicode)}, LazUTF8{$IFEND}  ;
+{------------------------------------------------------------------------------}
+{   TAPKTerminatorThread - protected methods                                   }
+{------------------------------------------------------------------------------}
 
 procedure TAPKTerminatorThread.sync_LogWrite;
 begin
@@ -304,7 +340,9 @@ If fLocalSettings.Settings.GeneralSettings.TerminateUnresponsive and not Termina
 Synchronize(sync_End);
 end;
 
-//==============================================================================
+{------------------------------------------------------------------------------}
+{   TAPKTerminatorThread - protected methods                                   }
+{------------------------------------------------------------------------------}
 
 constructor TAPKTerminatorThread.Create(Settings: TAPKSettings);
 begin
@@ -334,9 +372,20 @@ Resume;
 {$IFEND}
 end;
 
-//------------------------------------------------------------------------------
-//==============================================================================
-//------------------------------------------------------------------------------
+
+{==============================================================================}
+{------------------------------------------------------------------------------}
+{                                TAPKTerminator                                }
+{------------------------------------------------------------------------------}
+{==============================================================================}
+
+{==============================================================================}
+{   TAPKTerminator - implementation                                            }
+{==============================================================================}
+
+{------------------------------------------------------------------------------}
+{   TAPKTerminator - protected methods                                         }
+{------------------------------------------------------------------------------}
 
 procedure TAPKTerminator.ThreadEndHandler(Sender: TObject);
 begin
@@ -362,7 +411,9 @@ If Assigned(fWorkThread) then
   end;
 end;
 
-//==============================================================================
+{------------------------------------------------------------------------------}
+{   TAPKTerminator - public methods                                            }
+{------------------------------------------------------------------------------}
 
 constructor TAPKTerminator.Create;
 begin
@@ -388,9 +439,9 @@ case fState of
     begin
       FreeWorkingThread;
       fWorkThread := TAPKTerminatorThread.Create(Settings);
-      fWorkThread.OnLogWrite := LogWriteHandler;
-      fWorkThread.OnEnd := ThreadEndHandler;
-      fWorkThread.StartTermination;
+      TAPKTerminatorThread(fWorkThread).OnLogWrite := LogWriteHandler;
+      TAPKTerminatorThread(fWorkThread).OnEnd := ThreadEndHandler;
+      TAPKTerminatorThread(fWorkThread).StartTermination;
       fState := tsWorking;
       Result := True;
     end;
