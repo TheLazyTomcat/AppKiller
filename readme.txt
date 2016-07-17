@@ -11,7 +11,7 @@ which each part starts.
 
   Index ...................................................   7
   Description .............................................  26
-  Project information .....................................  46
+  Project information .....................................  48
   Installation ............................................  60
   How to use the program ..................................  75
   Changelog ............................................... 117
@@ -75,10 +75,10 @@ settings.
 How to use the program
 ----------------------------------------
 Given the nature of this program, it has to run in the background the whole time
-you want to use it. The program has minimal footprint (uses less than 1.5MiB of
-memory and does almost nothing), so it is possible to let it run for indefinite
-time. Just let it start automatically at the system startup and leave it running
-in the background.
+you want to use it. The program has minimal footprint (uses only few MiB of
+memory - depending on build - and uses minimum time on CPU), so it is possible
+to let it run for indefinite time. Just let it start automatically at the system
+startup and leave it running in the background.
 First thing you should do after installation is to fill list of processes to be
 automatically terminated (processes you know are problematic) and list of
 processes that should be never terminated (eg. system processes, hardware
