@@ -165,10 +165,10 @@ Note - Master branch does not contain binaries, they can be found in a branch
 
 Authors, contacts
 ----------------------------------------
-František Milt, frantisek.milt@gmail.com
+FrantiÅ¡ek Milt, frantisek.milt@gmail.com
 
 
 
 Copyright
 ----------------------------------------
-©2010-2016 František Milt, all rights reserved
+Â©2010-2016 FrantiÅ¡ek Milt, all rights reserved
