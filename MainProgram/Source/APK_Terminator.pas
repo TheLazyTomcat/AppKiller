@@ -68,7 +68,7 @@ uses
 type
   TAPKTerminatorThread = class(TThread)
   private
-    fTerminatingList: TStringList;
+    fTerminatingList: array of DWORD;
     fLocalSettings:   TAPKSettings;
     fOnEnd:           TNotifyEvent;
     fOnLogWriteText:  String;
@@ -78,7 +78,10 @@ type
     procedure sync_End; virtual;
     procedure WriteToLog(const Text: String); virtual;
     Function GetProcessName(ProcessHandle: THandle; out ProcessName: String): Boolean; virtual;
-    Function IsInTerminatingList(const ProcessName: String): Boolean; virtual;
+    Function TerminatingListIndexOf(ProcessID: DWORD): Integer; virtual;
+    Function TerminatingListAdd(ProcessID: DWORD): Integer; virtual;
+    procedure TerminatingListClear; virtual;
+    Function IsInTerminatingList(ProcessID: DWORD): Boolean; virtual;
     Function IsInTerminateList(const ProcessName: String): Boolean; virtual;
     Function IsInNeverTerminateList(const ProcessName: String): Boolean; virtual;
     procedure TerminateForegroundWindow; virtual;
@@ -139,12 +142,42 @@ If GetModuleFileNameEx(ProcessHandle,0,PChar(ProcessName),Length(ProcessName)) >
     Result := ProcessName <> '';
   end;
 end;
+//------------------------------------------------------------------------------
+
+Function TAPKTerminatorThread.TerminatingListIndexOf(ProcessID: DWORD): Integer;
+var
+  i:  Integer;
+begin
+For i := Low(fTerminatingList) to High(fTerminatingList) do
+  If fTerminatingList[i] = ProcessID then
+    begin
+      Result := i;
+      Exit;
+    end;
+Result := -1;
+end;
 
 //------------------------------------------------------------------------------
 
-Function TAPKTerminatorThread.IsInTerminatingList(const ProcessName: String): Boolean;
+Function TAPKTerminatorThread.TerminatingListAdd(ProcessID: DWORD): Integer;
 begin
-Result := fTerminatingList.IndexOf(ProcessName) >= 0;
+SetLength(fTerminatingList,Length(fTerminatingList) + 1);
+Result := High(fTerminatingList);
+fTerminatingList[Result] := ProcessID;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TAPKTerminatorThread.TerminatingListClear;
+begin
+SetLength(fTerminatingList,0);
+end;
+
+//------------------------------------------------------------------------------
+
+Function TAPKTerminatorThread.IsInTerminatingList(ProcessID: DWORD): Boolean;
+begin
+Result := TerminatingListIndexOf(ProcessID) >= 0;
 end;
 
 //------------------------------------------------------------------------------
@@ -198,25 +231,28 @@ ForegroundWindow := GetForegroundWindow;
 If ForegroundWindow <> 0 then
   begin
     GetWindowThreadProcessId(ForegroundWindow,{%H-}ProcessID);
-    ProcessHandle := OpenProcess(PROCESS_QUERY_INFORMATION or PROCESS_VM_READ or PROCESS_TERMINATE,False,ProcessID);
-    If ProcessHandle <> 0 then
-      try
-        If GetProcessName(ProcessHandle,ProcessName) then
-          begin
-            If not IsInTerminatingList(ProcessName) and not IsInNeverTerminateList(ProcessName) then
+    If not IsInTerminatingList(ProcessID) then
+      begin
+        ProcessHandle := OpenProcess(PROCESS_QUERY_INFORMATION or PROCESS_VM_READ or PROCESS_TERMINATE,False,ProcessID);
+        If ProcessHandle <> 0 then
+          try
+            If GetProcessName(ProcessHandle,ProcessName) then
               begin
-                fTerminatingList.Add(ProcessName);
-                If TerminateProcess(ProcessHandle,0) then
-                  WriteToLog(Format('TFW: Terminated process - %s (%d)',[ProcessName,ProcessID]));
-              end;
+                If not IsInNeverTerminateList(ProcessName) then
+                  begin
+                    TerminatingListAdd(ProcessID);
+                    If TerminateProcess(ProcessHandle,0) then
+                      WriteToLog(Format('TFW: Terminated process - %s [%d]',[ProcessName,ProcessID]));
+                  end;
+              end
+            else WriteToLog(Format('TFW: <ERROR> - Cannot obtain process name (0x%.8x).',[GetLastError]));
+          finally
+            CloseHandle(ProcessHandle)
           end
-        else WriteToLog('TFW: <ERROR> - Cannot obtain process name.');
-      finally
-        CloseHandle(ProcessHandle)
-      end
-    else WriteToLog('TFW: <ERROR> - Cannot obtain process handle.');
+        else WriteToLog(Format('TFW: <ERROR> - Cannot obtain process handle (0x%.8x).',[GetLastError]));
+      end;
   end
-else WriteToLog('TFW: <ERROR> - Cannot obtain handle to foreground window.');
+else WriteToLog(Format('TFW: <ERROR> - Cannot obtain handle to foreground window (0x%.8x).',[GetLastError]));
 end;
 
 //------------------------------------------------------------------------------
@@ -233,20 +269,20 @@ try
   For i := 0 to Pred(Enumerator.ProcessCount) do
     begin
       If IsInTerminateList(Enumerator[i].ProcessName) and
-         not IsInTerminatingList(Enumerator[i].ProcessName) and
+         not IsInTerminatingList(Enumerator[i].ProcessID) and
          not IsInNeverTerminateList(Enumerator[i].ProcessName) then
         begin
           ProcessHandle := OpenProcess(PROCESS_TERMINATE,False,Enumerator[i].ProcessID);
           If ProcessHandle <> 0 then
             try
-              fTerminatingList.Add(Enumerator[i].ProcessName);
+              TerminatingListAdd(Enumerator[i].ProcessID);
               If TerminateProcess(ProcessHandle,0) then
-                WriteToLog(Format('TPL: Terminated process - %s (%d)',[Enumerator[i].ProcessName,Enumerator[i].ProcessID]));
+                WriteToLog(Format('TPL: Terminated process - %s [%d]',[Enumerator[i].ProcessName,Enumerator[i].ProcessID]));
             finally
               CloseHandle(ProcessHandle);
             end
-          else WriteToLog(Format('TPL: <ERROR> - Cannot obtain handle to process - %s (%d).',
-                                 [Enumerator[i].ProcessName,Enumerator[i].ProcessID]));
+          else WriteToLog(Format('TPL: <ERROR> - Cannot obtain handle to process - %s [%d] (0x%.8x).',
+                                 [Enumerator[i].ProcessName,Enumerator[i].ProcessID,GetLastError]));
         end;
     end;
 finally
@@ -279,49 +315,33 @@ var
   ProcessID:      DWORD;
   ProcessHandle:  THandle;
   ProcessName:    String;
-  TerminatingID:  array of DWORD;
-
-  Function IsInTerminatingIDList(PID: DWORD): Boolean;
-  var
-    ii: Integer;
-  begin
-    Result := False;
-    For ii := Low(TerminatingID) to High(TerminatingID) do
-      If TerminatingID[ii] = PID then
-        begin
-          Result := True;
-          Break{For ii};
-        end;
-  end;
-
 begin
 If EnumWindows(@EnumWindowsCallback,{%H-}LPARAM(@Windows)) then
   For i := Low(Windows) to High(Windows) do
     begin
       If SendMessageTimeout(Windows[i],WM_NULL,0,0,SMTO_ABORTIFHUNG or SMTO_BLOCK,fLocalSettings.Settings.GeneralSettings.ResponseTimeout,{%H-}MsgResult) = 0 then
         begin
+          ProcessID := 0;
           GetWindowThreadProcessId(Windows[i],{%H-}ProcessID);
-          If not IsInTerminatingIDList(ProcessID) then
+          If (ProcessID <> 0) and not IsInTerminatingList(ProcessID) then
             begin
               ProcessHandle := OpenProcess(PROCESS_QUERY_INFORMATION or PROCESS_VM_READ or PROCESS_TERMINATE,False,ProcessID);
               If ProcessHandle <> 0 then
                 try
                   If GetProcessName(ProcessHandle,ProcessName) then
                     begin
-                      If not IsInTerminatingList(ProcessName) and not IsInNeverTerminateList(ProcessName) then
+                      If not IsInNeverTerminateList(ProcessName) then
                         begin
-                          fTerminatingList.Add(ProcessName);
-                          SetLength(TerminatingID,Length({%H-}TerminatingID) + 1);
-                          TerminatingID[High(TerminatingID)] := ProcessID;
+                          TerminatingListAdd(ProcessID);
                           If TerminateProcess(ProcessHandle,0) then
-                            WriteToLog(Format('TUP: Terminated process - %s (%d)',[ProcessName,ProcessID]));
+                            WriteToLog(Format('TUP: Terminated process - %s [%d]',[ProcessName,ProcessID]));
                         end;
                     end
-                  else WriteToLog('TUP: <ERROR> - Cannot obtain process name.')
+                  else WriteToLog(Format('TUP: <ERROR> - Cannot obtain process name (0x%.8x).',[GetLastError]))
                 finally
                   CloseHandle(ProcessHandle);
                 end
-              else WriteToLog('TUP: <ERROR> - Cannot obtain process handle.' + inttostr(processid));
+              else WriteToLog(Format('TUP: <ERROR> - Cannot obtain process handle [%d] (0x%.8x).',[ProcessID,GetLastError]));
             end;
         end;
     end;
@@ -331,6 +351,7 @@ end;
 
 procedure TAPKTerminatorThread.Execute;
 begin
+TerminatingListClear;
 If fLocalSettings.Settings.GeneralSettings.TerminateForegroundWnd and not Terminated then
   TerminateForegroundWindow;
 If fLocalSettings.Settings.GeneralSettings.TerminateByList and not Terminated then
@@ -348,7 +369,6 @@ constructor TAPKTerminatorThread.Create(Settings: TAPKSettings);
 begin
 inherited Create(True);
 FreeOnTerminate := False;
-fTerminatingList := TStringList.Create;
 fLocalSettings := TAPKSettings.CreateCopy(Settings);
 end;
 
@@ -357,7 +377,7 @@ end;
 destructor TAPKTerminatorThread.Destroy;
 begin
 fLocalSettings.Free;
-fTerminatingList.Free;
+TerminatingListClear;
 inherited;
 end;
 

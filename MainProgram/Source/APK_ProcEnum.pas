@@ -234,7 +234,7 @@ If ModuleHandle <> 0 then
     fDisableWoW64RedirectProc := GetProcAddress(ModuleHandle,'Wow64DisableWow64FsRedirection');
     fRevertWoW64RedirectProc := GetProcAddress(ModuleHandle,'Wow64RevertWow64FsRedirection');
   end
-else raise Exception.Create('TProcessEnumeratorInternal.InitForWin64: Unable to load Kernell32.dll library.');
+else raise Exception.CreateFmt('TProcessEnumeratorInternal.InitForWin64: Unable to load Kernell32.dll library (0x.8x).',[GetLastError]);
 If not Assigned(fDisableWoW64RedirectProc) or not Assigned(fRevertWoW64RedirectProc) then
   begin
     fDisableWoW64RedirectProc := nil;
