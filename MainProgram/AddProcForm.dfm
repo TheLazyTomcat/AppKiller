@@ -110,6 +110,8 @@ object fAddProcForm: TfAddProcForm
     SmallImages = imglIcons
     TabOrder = 2
     ViewStyle = vsReport
+    OnColumnClick = lvRunningProcessesColumnClick
+    OnCompare = lvRunningProcessesCompare
     OnDblClick = lvRunningProcessesDblClick
     OnDeletion = lvRunningProcessesDeletion
     OnResize = lvRunningProcessesResize

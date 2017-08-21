@@ -7,9 +7,7 @@
 -------------------------------------------------------------------------------}
 unit AddProcForm;
 
-{$IFDEF FPC}
-  {$MODE Delphi}
-{$ENDIF}
+{$INCLUDE 'Source\APK_Defs.inc'}
 
 interface
 
@@ -19,6 +17,10 @@ uses
   APK_ProcEnum;
 
 type
+  TArrowState = (asNone,asAscending,asDescending);
+
+	{ TfAddProcForm }
+
   TfAddProcForm = class(TForm)
     leProcessName: TLabeledEdit;
     btnBrowse: TButton;
@@ -46,14 +48,19 @@ type
     procedure btnAcceptClick(Sender: TObject);
     procedure btnCancelClick(Sender: TObject);  
     procedure tmrLoadingTimerTimer(Sender: TObject);
+    procedure lvRunningProcessesColumnClick(Sender: TObject; Column: TListColumn);
+    procedure lvRunningProcessesCompare(Sender: TObject; Item1, Item2: TListItem; {%H-}Data: Integer; var Compare: Integer);
   private
     fSelectedProcesses: TStringList;
   protected
-    Enumerator:   TAPKProcessEnumerator;
-    PreviousCtrl: TWinControl;
-    ActiveCtrl:   TWinControl;
+    Enumerator:     TAPKProcessEnumerator;
+    PreviousCtrl:   TWinControl;
+    ActiveCtrl:     TWinControl;
+    SrtDescending:  Boolean;
+    SrtColumnIdx:   Integer;
     procedure OnEnumerated(Sender: TOBject);
     procedure ActiveControlChange(Sender: TObject);
+    procedure ShowColumnArrow(Column: Integer; ArrowState: TArrowState);
   public
     Function ShowAsPrompt: Boolean;
     property SelectedProcesses: TStringList read fSelectedProcesses;
@@ -70,16 +77,26 @@ implementation
   {$R *.dfm}
 {$ENDIF}
 
+uses
+  CommCtrl;
+
 procedure TfAddProcForm.OnEnumerated(Sender: TOBject);
 var
   i:  Integer;
 begin
+lvRunningProcesses.SortType := stNone;
+ShowColumnArrow(SrtColumnIdx,asNone);
 If Sender is TAPKProcessEnumerator then
   begin
     lvRunningProcesses.Items.BeginUpdate;
     try
       lvRunningProcesses.Clear;
-      imglIcons.Clear;
+      //imglIcons.Clear;
+    {
+      TImageList.Clear is causing problems, images added after it are not shown.
+    }
+      For i := Pred(imglIcons.Count) downto 0 do
+        imglIcons.Delete(i);
       For i := 0 to Pred(Enumerator.ProcessCount) do
         If cbShowAll.Checked or not Enumerator.Processes[i].LimitedAccess then
          with lvRunningProcesses.Items.Add,Enumerator.Processes[i] do
@@ -103,6 +120,12 @@ If Sender is TAPKProcessEnumerator then
   end;
 tmrLoadingTimer.Enabled := False;
 lblLoading.Caption := '';
+If SrtColumnIdx >= 0 then
+  begin
+    i := SrtColumnIdx;
+    SrtColumnIdx := -2;
+    lvRunningProcesses.OnColumnClick(lvRunningProcesses,lvRunningProcesses.Column[i]);
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -111,6 +134,34 @@ procedure TfAddProcForm.ActiveControlChange(Sender: TObject);
 begin
 PreviousCtrl := ActiveCtrl;
 ActiveCtrl := ActiveControl;
+end;
+
+//------------------------------------------------------------------------------
+
+const
+  HDF_SORTUP   = $0400;
+  HDF_SORTDOWN = $0200;
+
+procedure TfAddProcForm.ShowColumnArrow(Column: Integer; ArrowState: TArrowState);
+var
+  Header: HWND;
+  Item:   THDItem;
+begin
+If Column >= 0 then
+  begin
+    Header := ListView_GetHeader(lvRunningProcesses.Handle);
+    FillChar({%H-}Item,SizeOf(Item),0);
+    Item.Mask := HDI_FORMAT;
+    Header_GetItem(Header,Column,Item);
+    Item.fmt := Item.fmt and not (HDF_SORTUP or HDF_SORTDOWN);
+    case ArrowState of
+      asAscending:  Item.fmt := Item.fmt or HDF_SORTDOWN and not HDF_SORTUP;
+      asDescending: Item.fmt := Item.fmt or HDF_SORTUP and not HDF_SORTDOWN;
+    else
+      Item.fmt := Item.fmt and not (HDF_SORTUP or HDF_SORTDOWN);
+    end;
+    Header_SetItem(Header,Column,Item);
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -142,6 +193,8 @@ Enumerator.IconBackground := lvRunningProcesses.Color;
 {$ENDIF}
 Screen.OnActiveControlChange := ActiveControlChange;
 fSelectedProcesses := TStringList.Create;
+SrtDescending := False;
+SrtColumnIdx := -1;
 end;
 
 //------------------------------------------------------------------------------
@@ -265,6 +318,42 @@ If tmrLoadingTimer.Tag > 2 then
   tmrLoadingTimer.Tag := 0
 else
   tmrLoadingTimer.Tag := tmrLoadingTimer.Tag + 1;
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TfAddProcForm.lvRunningProcessesColumnClick(Sender: TObject;
+  Column: TListColumn);
+begin
+TListView(Sender).SortType := stNone;
+If Column.Index <> SrtColumnIdx then
+  begin
+    ShowColumnArrow(SrtColumnIdx,asNone);
+    If SrtColumnIdx >= -1 then
+      SrtDescending := False;
+    SrtColumnIdx := Column.Index;
+  end
+else SrtDescending := not SrtDescending;
+TListView(Sender).SortType := stText;
+If SrtDescending then
+  ShowColumnArrow(SrtColumnIdx,asDescending)
+else
+  ShowColumnArrow(SrtColumnIdx,asAscending);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TfAddProcForm.lvRunningProcessesCompare(Sender: TObject; Item1,
+  Item2: TListItem; Data: Integer; var Compare: Integer);
+begin
+case SrtColumnIdx of
+  0:  Compare := AnsiCompareText(Item1.Caption,Item2.Caption);
+  2:  Compare := StrToIntDef(Item1.SubItems[SrtColumnIdx - 1],0) -
+                 StrToIntDef(Item2.SubItems[SrtColumnIdx - 1],0);
+else
+  Compare := AnsiCompareText(Item1.SubItems[SrtColumnIdx - 1], Item2.SubItems[SrtColumnIdx - 1]);
+end;
+If SrtDescending then Compare := -Compare;
 end;
 
 end.

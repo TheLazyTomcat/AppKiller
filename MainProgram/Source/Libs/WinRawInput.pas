@@ -16,6 +16,9 @@
 
   Version 1.2
 
+  Dependencies:
+    AuxTypes - github.com/ncs-sniper/Lib.AuxTypes  
+
 ===============================================================================}
 unit WinRawInput;
 
@@ -30,6 +33,10 @@ unit WinRawInput;
 {$IF not(defined(MSWINDOWS) or defined(WINDOWS))}
   {$MESSAGE FATAL 'Unsupported operating system.'}
 {$IFEND}
+
+{$IFDEF FPC}
+  {$MODE ObjFPC}{$H+}
+{$ENDIF}
 
 interface
 

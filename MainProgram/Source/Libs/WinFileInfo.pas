@@ -9,15 +9,38 @@
 
   WinFileInfo
 
-  ©František Milt 2016-05-23
+  ©František Milt 2017-07-17
 
-  Version 1.0.5
+  Version 1.0.6
+
+  Dependencies:
+    AuxTypes - github.com/ncs-sniper/Lib.AuxTypes
+    StrRect  - github.com/ncs-sniper/Lib.StrRect
 
 ===============================================================================}
 unit WinFileInfo;
 
 {$IF not(defined(MSWINDOWS) or defined(WINDOWS))}
   {$MESSAGE FATAL 'Unsupported operating system.'}
+{$IFEND}
+
+{$IFDEF FPC}
+  {
+    Activate symbol BARE_FPC if you want to compile this unit outside of
+    Lazarus.
+    Non-unicode strings are assumed to be ANSI-encoded when defined, otherwise
+    they are assumed to be UTF8-encoded.
+
+    Not defined by default.
+  }
+  {.$DEFINE BARE_FPC}
+  {$MODE ObjFPC}{$H+}
+{$ENDIF}
+
+{$IF Defined(FPC) and not Defined(Unicode) and (FPC_FULLVERSION < 20701) and not Defined(BARE_FPC)}
+  {$DEFINE UTF8Wrappers}
+{$ELSE}
+  {$UNDEF UTF8Wrappers}
 {$IFEND}
 
 interface
@@ -370,22 +393,12 @@ type
 
 Function SizeToStr(Size: UInt64): String;
 
-
-{$IF not Declared(FPC_FULLVERSION)}
-const
-(*
-  Delphi 7 requires this, otherwise they throw error on comparison in
-  {$IF FPC_FULLVERSION < ...} condition.
-*)
-  FPC_FULLVERSION = Integer(0);
-{$IFEND}
-
 implementation
 
 uses
-  Classes{$IFDEF FPC}, LazUTF8{$IF (FPC_FULLVERSION < 20701)}, LazFileUTils{$IFEND}{$ENDIF};
+  Classes, StrRect{$IFDEF UTF8Wrappers}, LazFileUtils{$ENDIF};
 
-{$If not declared(GetFileSizeEx)}
+{$IF not Declared(GetFileSizeEx)}
 Function GetFileSizeEx(hFile: THandle; lpFileSize: PInt64): BOOL; stdcall; external 'kernel32.dll';
 {$IFEND}
 
@@ -518,7 +531,7 @@ var
 begin
 Offset := -1;
 repeat
-Inc(Offset);
+  Inc(Offset);
 until ((Size shr (PrefixShift * Succ(Offset))) = 0) or (Offset >= 8);
 case Size shr (PrefixShift * Offset) of
    1..9:  Deci := 2;
@@ -616,11 +629,7 @@ begin
 Result := '';
 If fVersionInfoPresent and (Language <> '') and (Key <> '') then
   If VerQueryValue(fVerInfoData,PChar(Format('\StringFileInfo\%s\%s',[Language,Key])),{%H-}StrPtr,{%H-}StrSize) then
-  {$If defined(FPC) and not defined(Unicode)}
-    Result := WinCPToUTF8(PChar(StrPtr));
-  {$ELSE}
-    Result := PChar(StrPtr);
-  {$IFEND}
+    Result := WinToStr(PChar(StrPtr));
 end;
 
 {------------------------------------------------------------------------------}
@@ -646,18 +655,8 @@ For Table := Low(fVersionInfoStringTables) to High(fVersionInfoStringTables) do
     begin
       For i := High(Strings) downto Low(Strings) do
         begin
-        {$IFDEF FPC}
-          If VerQueryValue(fVerInfoData,PChar(Format('\StringFileInfo\%s\%s',[Translation.LanguageStr,UTF8ToWinCP(Strings[i].Key)])),{%H-}StrPtr,{%H-}StrSize) then
-        {$ELSE}
-          If VerQueryValue(fVerInfoData,PChar(Format('\StringFileInfo\%s\%s',[Translation.LanguageStr,Strings[i].Key])),{%H-}StrPtr,{%H-}StrSize) then
-        {$ENDIF}
-            begin
-            {$If defined(FPC) and not defined(Unicode)}
-              Strings[i].Value := WinCPToUTF8(PChar(StrPtr))
-            {$ELSE}
-              Strings[i].Value := PChar(StrPtr)
-            {$IFEND}
-            end
+          If VerQueryValue(fVerInfoData,PChar(Format('\StringFileInfo\%s\%s',[Translation.LanguageStr,StrToWin(Strings[i].Key)])),{%H-}StrPtr,{%H-}StrSize) then
+            Strings[i].Value := WinToStr(PChar(StrPtr))
           else
             begin
               For j := i to Pred(High(Strings)) do
@@ -729,10 +728,8 @@ For i := Low(fVersionInfoStruct.StringFileInfos) to High(fVersionInfoStruct.Stri
               CodePage := StrToIntDef('$' + Copy(LanguageStr,5,4),0);
               SetLength(LanguageName,256);
               SetLength(LanguageName,VerLanguageName(Translation,PChar(LanguageName),Length(LanguageName)));
-            {$If defined(FPC) and not defined(Unicode)}
-              LanguageName := WinCPToUTF8(LanguageName);
-            {$IFEND}
-            end;                                           
+              LanguageName := WinToStr(LanguageName);
+            end;
         end;
 end;
 
@@ -863,9 +860,7 @@ If VerQueryValue(fVerInfoData,'\VarFileInfo\Translation',{%H-}TrsPtr,{%H-}TrsSiz
           Translation := {%H-}PUInt32({%H-}PtrUInt(TrsPtr) + (UInt32(i) * SizeOf(UInt32)))^;
           SetLength(LanguageName,256);
           SetLength(LanguageName,VerLanguageName(Translation,PChar(LanguageName),Length(LanguageName)));
-        {$If defined(FPC) and not defined(Unicode)}
-          LanguageName := WinCPToUTF8(LanguageName);
-        {$IFEND}
+          LanguageName := WinToStr(LanguageName);
           LanguageStr := IntToHex(Language,4) + IntToHex(CodePage,4);
         end;
   end;
@@ -953,20 +948,12 @@ procedure TWinFileInfo.LoadVersionInfo;
 var
   Dummy:  DWord;
 begin
-{$IF Defined(FPC) and not Defined(Unicode)}
-fVerInfoSize := GetFileVersionInfoSize(PChar(UTF8ToWinCP(fLongName)),{%H-}Dummy);
-{$ELSE}
-fVerInfoSize := GetFileVersionInfoSize(PChar(fLongName),{%H-}Dummy);
-{$IFEND}
+fVerInfoSize := GetFileVersionInfoSize(PChar(StrToWin(fLongName)),{%H-}Dummy);
 fVersionInfoPresent := fVerInfoSize > 0;
 If fVersionInfoPresent then
   begin
     fVerInfoData := AllocMem(fVerInfoSize);
-  {$IF Defined(FPC) and not Defined(Unicode)}
-    If GetFileVersionInfo(PChar(UTF8ToWinCP(fLongName)),0,fVerInfoSize,fVerInfoData) then
-  {$ELSE}
-    If GetFileVersionInfo(PChar(fLongName),0,fVerInfoSize,fVerInfoData) then
-  {$IFEND}
+    If GetFileVersionInfo(PChar(StrToWin(fLongName)),0,fVerInfoSize,fVerInfoData) then
       begin
         If LoadingStrategyFlag(WFI_LS_LoadFixedFileInfo) then
           VersionInfo_LoadFixedFileInfo;
@@ -1080,11 +1067,7 @@ end;
 
 Function TWinFileInfo.CheckFileExists: Boolean;
 begin
-{$IF Defined(FPC) and not Defined(Unicode)}
-fAttributesFlags := GetFileAttributes(PChar(UTF8ToWinCP(fLongName)));
-{$ELSE}
-fAttributesFlags := GetFileAttributes(PChar(fLongName));
-{$IFEND}
+fAttributesFlags := GetFileAttributes(PChar(StrToWin(fLongName)));
 fExists := (fAttributesFlags <> INVALID_FILE_ATTRIBUTES) and
            (fAttributesFlags and FILE_ATTRIBUTE_DIRECTORY = 0);
 Result := fExists;
@@ -1124,25 +1107,17 @@ end;
 
 procedure TWinFileInfo.Initialize(const FileName: String);
 begin
-{$IF Defined(FPC) and not Defined(Unicode) and (FPC_FULLVERSION < 20701)}
+{$IFDEF UTF8Wrappers}
 fLongName := ExpandFileNameUTF8(FileName);
 {$ELSE}
 fLongName := ExpandFileName(FileName);
-{$IFEND}
+{$ENDIF}
 SetLength(fShortName,MAX_PATH);
-{$IF Defined(FPC) and not Defined(Unicode)}
-SetLength(fShortName,GetShortPathName(PChar(UTF8ToWinCP(fLongName)),PChar(fShortName),Length(fShortName)));
-fShortName := WinCPToUTF8(fShortName);
-{$ELSE}
-SetLength(fShortName,GetShortPathName(PChar(fLongName),PChar(fShortName),Length(fShortName)));
-{$IFEND}
+SetLength(fShortName,GetShortPathName(PChar(StrToWin(fLongName)),PChar(fShortName),Length(fShortName)));
+fShortName := WinToStr(fShortName);
 If CheckFileExists then
   begin
-  {$IF Defined(FPC) and not Defined(Unicode)}
-    fFileHandle := CreateFile(PChar(UTF8ToWinCP(fLongName)),0,FILE_SHARE_READ or FILE_SHARE_WRITE,nil,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0);
-  {$ELSE}
-    fFileHandle := CreateFile(PChar(fLongName),0,FILE_SHARE_READ or FILE_SHARE_WRITE,nil,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0);
-  {$IFEND}
+    fFileHandle := CreateFile(PChar(StrToWin(fLongName)),0,FILE_SHARE_READ or FILE_SHARE_WRITE,nil,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0);
     If fFileHandle <> INVALID_HANDLE_VALUE then
       begin
         If LoadingStrategyFlag(WFI_LS_LoadSize) then LoadSize;
@@ -1177,9 +1152,7 @@ var
 begin
 SetLength(ModuleFileName,MAX_PATH);
 SetLength(ModuleFileName,GetModuleFileName(hInstance,PChar(ModuleFileName),Length(ModuleFileName)));
-{$IF Defined(FPC) and not Defined(Unicode)}
-ModuleFileName := WinCPToUTF8(ModuleFileName);
-{$IFEND}
+ModuleFileName := WinToStr(ModuleFileName);
 Create(ModuleFileName,LoadingStrategy);
 end;
 
@@ -1189,7 +1162,13 @@ constructor TWinFileInfo.Create(const FileName: String; LoadingStrategy: UInt32 
 begin
 inherited Create;
 fLoadingStrategy := LoadingStrategy;
+{$WARN SYMBOL_PLATFORM OFF}
+{$IF not Defined(FPC) and (CompilerVersion >= 18)} // Delphi 2006+
+fFormatSettings := TFormatSettings.Create(LOCALE_USER_DEFAULT);
+{$ELSE}
 {%H-}GetLocaleFormatSettings(LOCALE_USER_DEFAULT,fFormatSettings);
+{$IFEND}
+{$WARN SYMBOL_PLATFORM ON}
 Initialize(FileName);
 end;
 

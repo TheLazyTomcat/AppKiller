@@ -5,22 +5,31 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 -------------------------------------------------------------------------------}
-{==============================================================================}
-{                                                                              }
-{   Utility Window                                                             }
-{                                                                              }
-{   ©František Milt 2015-12-13                                                 }
-{                                                                              }
-{   Version 1.2.1                                                              }
-{                                                                              }
-{==============================================================================}
+{===============================================================================
+
+  Utility Window
+
+  ©František Milt 2015-12-13
+
+  Version 1.2.1
+
+  Dependencies:
+    AuxTypes       - github.com/ncs-sniper/Lib.AuxTypes
+    MulticastEvent - github.com/ncs-sniper/Lib.MulticastEvent
+    WndAlloc       - github.com/ncs-sniper/Lib.WndAlloc
+
+===============================================================================}
 unit UtilityWindow;
 
 {$IF not(defined(WINDOWS) or defined(MSWINDOWS))}
   {$MESSAGE FATAL 'Unsupported operating system.'}
 {$IFEND}
 
-{$IFDEF FPC}{$MODE Delphi}{$ENDIF}
+{$IFDEF FPC}
+  {$MODE Delphi}
+{$ENDIF}
+
+{$TYPEINFO ON}
 
 interface
 

@@ -13571,9 +13571,6 @@ object fMainForm: TfMainForm
       WordWrap = False
     end
   end
-  object oXPManifest: TXPManifest
-    Left = 592
-  end
   object pmnTermList: TPopupMenu
     OnPopup = pmnTermListPopup
     Left = 624

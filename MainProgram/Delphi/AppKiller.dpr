@@ -7,9 +7,13 @@
 -------------------------------------------------------------------------------}
 program AppKiller;
 
+{$INCLUDE '..\Source\APK_Defs.inc'}
+
+{$R '..\Resources\uac_manifest.res'}
+
 uses
   Forms,
-  
+
   MainForm     in '..\MainForm.pas' {fMainForm},
   AddProcForm  in '..\AddProcForm.pas' {fAddProcForm},
   ShortcutForm in '..\ShortcutForm.pas' {fShortcutForm},

@@ -84,9 +84,7 @@ type
 implementation
 
 uses
-  Classes, Math, ShellAPI, Forms,
-  APK_Strings
-  {$IF Defined(FPC) and not Defined(Unicode)}, LazUTF8{$IFEND};
+  Classes, Math, ShellAPI, Forms, APK_Strings, StrRect;
 
 {$R '..\Resources\tray_icon.res'}
 
@@ -194,11 +192,7 @@ LoadIconFromResources;
 BuildPopupMenu;
 fUtilityWindow := TUtilityWindow.Create;
 fUtilityWindow.OnMessage.Add(MessageHandler);
-{$IF Defined(FPC) and not Defined(Unicode)}
-fMessageID := RegisterWindowMessage(PChar(UTF8ToWinCP(APKSTR_TI_MessageName)));
-{$ELSE}
-fMessageID := RegisterWindowMessage(PChar(APKSTR_TI_MessageName));
-{$IFEND}
+fMessageID := RegisterWindowMessage(PChar(StrToWin(APKSTR_TI_MessageName)));
 with fIconData do
   begin
     cbSize := SizeOf(fIconData);
@@ -228,9 +222,7 @@ end;
 procedure TAPKTrayIcon.SetTipText(IconTipText: String);
 begin
 FillChar(fIconData.szTip,SizeOf(fIconData.szTip),0);
-{$IF Defined(FPC) and not Defined(Unicode)}
-IconTipText := UTF8ToWinCP(IconTipText);
-{$IFEND}
+IconTipText := StrToWin(IconTipText);
 Move(PChar(IconTipText)^,Addr(fIconData.szTip)^,Min(Length(IconTipText),Length(fIconData.szTip) - 1) * SizeOf(Char));
 UpdateTrayIcon;
 end;

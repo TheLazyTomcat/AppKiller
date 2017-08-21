@@ -15,11 +15,11 @@ which each part starts.
   Installation ............................................  60
   How to use the program ..................................  75
   Changelog ............................................... 117
-  Known issues and limitations ............................ 126
-  Licensing ............................................... 135
-  Repositories ............................................ 154
-  Authors, contacts ....................................... 166
-  Copyright ............................................... 172
+  Known issues and limitations ............................ 132
+  Licensing ............................................... 144
+  Repositories ............................................ 163
+  Authors, contacts ....................................... 175
+  Copyright ............................................... 181
 
 
 
@@ -118,6 +118,12 @@ Changelog
 ----------------------------------------
 List of changes between individual versions of this program.
 
+AppKiller 3.0.0 -> AppKiller 3.0.1
+  - program is now UAC-aware and runs at administrative privilige level
+  - ...therefore it can access and terminate processes with higher privileges
+  - changed how is the program started at system start (via Task Scheduler)
+  - list of running processes can be sorted
+
 AppKiller 2.x -> AppKiller 3.0.0
   - program rewritten from scratch
 
@@ -125,10 +131,13 @@ AppKiller 2.x -> AppKiller 3.0.0
 
 Known issues and limitations
 ----------------------------------------
-If you run this program on Windows Vista or newer, you should be avare that it
-does not have access to protected and system processes (generally any process
-with higher privileges), and therefore cannot terminate them.
-I will correct this only when there will be demand.
+When installing new version over the old one, make sure you do the following:
+
+  - in the old version, disable automatic run at startup
+  - end the running instance
+  - install new version (log and settings file are compatible with new version)
+  - run the new version
+  - enable autorun (if required)
 
 
 
@@ -171,4 +180,4 @@ František Milt, frantisek.milt@gmail.com
 
 Copyright
 ----------------------------------------
-©2010-2016 František Milt, all rights reserved
+©2010-2017 František Milt, all rights reserved

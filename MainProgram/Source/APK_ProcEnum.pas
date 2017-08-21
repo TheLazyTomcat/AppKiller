@@ -79,9 +79,7 @@ implementation
 
 uses
   SysUtils, StrUtils, {$IFDEF FPC} jwaTlHelp32{$ELSE} TlHelp32{$ENDIF},
-  WinFileInfo,
-  APK_System
-  {$IF Defined(FPC) and not Defined(Unicode)}, LazUTF8{$IFEND};
+  WinFileInfo, APK_System, StrRect;
 
 {==============================================================================}
 {   Auxiliary functions - implementations                                      }
@@ -234,7 +232,7 @@ If ModuleHandle <> 0 then
     fDisableWoW64RedirectProc := GetProcAddress(ModuleHandle,'Wow64DisableWow64FsRedirection');
     fRevertWoW64RedirectProc := GetProcAddress(ModuleHandle,'Wow64RevertWow64FsRedirection');
   end
-else raise Exception.Create('TProcessEnumeratorInternal.InitForWin64: Unable to load Kernell32.dll library.');
+else raise Exception.CreateFmt('TProcessEnumeratorInternal.InitForWin64: Unable to load Kernell32.dll library (0x.8x).',[GetLastError]);
 If not Assigned(fDisableWoW64RedirectProc) or not Assigned(fRevertWoW64RedirectProc) then
   begin
     fDisableWoW64RedirectProc := nil;
@@ -294,11 +292,7 @@ begin
 {$ENDIF}  
 SetLength(TempStr,GetLogicalDriveStrings(0,nil));
 SetLength(TempStr,GetLogicalDriveStrings(Length(TempStr),PChar(TempStr)));
-{$IF Defined(FPC) and not Defined(Unicode)}
-ParseStrings(WinCPToUTF8(TempStr),DrivePaths);
-{$ELSE}
-ParseStrings(TempStr,DrivePaths);
-{$IFEND}
+ParseStrings(WinToStr(TempStr),DrivePaths);
 SetLength(fDevices,Length(DrivePaths));
 For i := Low(DrivePaths) to High(DrivePaths) do
   begin
@@ -306,18 +300,10 @@ For i := Low(DrivePaths) to High(DrivePaths) do
     SetLength(TempStr,0);
     repeat
       SetLength(TempStr,Length(TempStr) + 1024);
-    {$IF Defined(FPC) and not Defined(Unicode)}
-      ResLen := QueryDosDevice(PChar(UTF8ToWinCP(fDevices[i].DrivePath)),PChar(TempStr),Length(TempStr));
-    {$ELSE}
-      ResLen := QueryDosDevice(PChar(fDevices[i].DrivePath),PChar(TempStr),Length(TempStr));
-    {$IFEND}
+      ResLen := QueryDosDevice(PChar(StrToWin(fDevices[i].DrivePath)),PChar(TempStr),Length(TempStr));
     until GetLastError <> ERROR_INSUFFICIENT_BUFFER;
     SetLength(TempStr,ResLen);
-  {$IF Defined(FPC) and not Defined(Unicode)}
-    ParseStrings(WinCPToUTF8(TempStr),DevicePaths);
-  {$ELSE}
-    ParseStrings(TempStr,DevicePaths);
-  {$IFEND}
+    ParseStrings(WinToStr(TempStr),DevicePaths);
     If Length(DevicePaths) > 0 then
       fDevices[i].DevicePath := DevicePaths[Low(DevicePaths)]
     else
@@ -364,9 +350,7 @@ SetLength(Result,GetProcessImageFileName(ProcessHandle,PChar(Result),Length(Resu
 // number of chars copied into buffer can be larger than is actual length of the string...
 If Length(Result) > 0 then
   SetLength(Result,StrLen(PChar(Result)));
-{$IF Defined(FPC) and not Defined(Unicode)}
-Result := WinCPToUTF8(Result);
-{$IFEND}
+Result := WinToStr(Result);
 // translate from device path to drive path
 If Length(Result) > 0 then
   For i := Low(fDevices) to High(fDevices) do
@@ -384,11 +368,7 @@ var
   IconHandle: HICON;
 begin
 Result := nil;
-{$IF Defined(FPC) and not Defined(Unicode)}
-If ExtractIconEx(PChar(UTF8ToWinCP(FileName)),0,nil,@IconHandle,1) = 1 then
-{$ELSE}
-If ExtractIconEx(PChar(FileName),0,nil,@IconHandle,1) = 1 then
-{$IFEND}
+If ExtractIconEx(PChar(StrToWin(FileName)),0,nil,@IconHandle,1) = 1 then
   If IconHandle <> 0 then
     begin
       Result := TBitmap.Create;
@@ -503,11 +483,7 @@ try
     If Process32First(SnapshotHandle,ProcessEntry32) then
       repeat
         SetLength(fProcesses,Length(fProcesses) + 1);
-      {$IF Defined(FPC) and not Defined(Unicode)}
-        fProcesses[High(fProcesses)].ProcessName := WinCPToUTF8(ProcessEntry32.szExeFile);
-      {$ELSE}
-        fProcesses[High(fProcesses)].ProcessName := ProcessEntry32.szExeFile;
-      {$IFEND}
+        fProcesses[High(fProcesses)].ProcessName := WinToStr(ProcessEntry32.szExeFile);
         fProcesses[High(fProcesses)].ProcessID := ProcessEntry32.th32ProcessID;
         If fObtainProcessImageInfo then
           GetProcessImageInfo(fProcesses[High(fProcesses)])

@@ -9,9 +9,12 @@
 
   SimpleLog
 
-  ©František Milt 2016-07-12
+  ©František Milt 2017-07-17
 
-  Version 1.3.7
+  Version 1.3.8
+
+  Dependencies:
+    StrRect - github.com/ncs-sniper/Lib.StrRect
 
 ===============================================================================}
 {$IFNDEF SimpleLog_Include}
@@ -21,6 +24,27 @@ unit SimpleLog;
 {$IF not(defined(MSWINDOWS) or defined(WINDOWS))}
   {$MESSAGE FATAL 'Unsupported operating system.'}
 {$IFEND}
+
+{$IFDEF FPC}
+  {
+    Activate symbol BARE_FPC if you want to compile this unit outside of
+    Lazarus.
+    Non-unicode strings are assumed to be ANSI-encoded when defined, otherwise
+    they are assumed to be UTF8-encoded.
+
+    Not defined by default.
+  }
+  {.$DEFINE BARE_FPC}
+  {$MODE ObjFPC}{$H+}
+{$ENDIF}
+
+{$IF Defined(FPC) and not Defined(Unicode) and not Defined(BARE_FPC) and (FPC_FULLVERSION < 20701)}
+  {$DEFINE UTF8Wrappers}
+{$ELSE}
+  {$UNDEF UTF8Wrappers}
+{$IFEND}
+
+{$TYPEINFO ON}
 
 interface
 
@@ -139,29 +163,19 @@ var
   LogFileName:    String = '';
 {$ENDIF}
 
-{$IF not Declared(FPC_FULLVERSION)}
-const
-(*
-  Delphi 7 requires this, otherwise they throw error on comparison in
-  {$IF FPC_FULLVERSION < ...} condition.
-*)
-  FPC_FULLVERSION = Integer(0);
-{$IFEND}
-
 implementation
 
 uses
-  Windows, StrUtils
-  {$IF Defined(FPC) and not Defined(Unicode)}
-  (*
-    If compiler throws error that LazUTF8 unit cannot be found, you have to
-    add LazUtils to required packages (Project > Project Inspector).
-  *)
-  , LazUTF8
-  {$IF (FPC_FULLVERSION < 20701)}
-  , LazFileUtils
-  {$IFEND}
-  {$IFEND};
+  Windows, StrUtils, StrRect {$IFDEF UTF8Wrappers}, LazFileUtils {$ENDIF};
+
+Function _FileExists(const FileName: String): Boolean;
+begin
+{$IFDEF UTF8Wrappers}
+Result := FileExistsUTF8(FileName);
+{$ELSE}
+Result := FileExists(FileName);
+{$ENDIF}
+end;
 
 {==============================================================================}
 {    TSimpleLog // Console binding                                             }
@@ -186,14 +200,27 @@ const
 
 Function SLCB_Output(var F: TTextRec): Integer;
 var
-  BytesWritten: DWord;
-  StrBuffer:    String;
+  CharsWritten: DWord;
+  StrBuffer:    AnsiString;
+{$IFDEF Unicode}
+  Text:         String;
 begin
-If WriteConsole(F.Handle,F.BufPtr,F.BufPos,{%H-}BytesWritten,nil) then
+SetLength(StrBuffer,F.BufPos);
+Move(F.Buffer,PAnsiChar(StrBuffer)^,F.BufPos * SizeOf(AnsiChar));
+Text := String(StrBuffer);
+If WriteConsoleW(F.Handle,PChar(Text),Length(Text),{%H-}CharsWritten,nil) then
+{$ELSE}
+begin
+If WriteConsoleA(F.Handle,F.BufPtr,F.BufPos,{%H-}CharsWritten,nil) then
+{$ENDIF}
   begin
     SetLength(StrBuffer,F.BufPos);
-    Move(F.Buffer,PChar(StrBuffer)^,F.BufPos * SizeOf(Char));
-    TSimpleLog(Addr(F.UserData[UDI_OUTFILE])^).ProtectedAddLog(StrBuffer,0,False);
+    Move(F.Buffer,PAnsiChar(StrBuffer)^,F.BufPos * SizeOf(AnsiChar));
+  {$IFDEF Unicode}
+    TSimpleLog(Addr(F.UserData[UDI_OUTFILE])^).ProtectedAddLog(AnsiToStr(StrBuffer),0,False);
+  {$ELSE}
+    TSimpleLog(Addr(F.UserData[UDI_OUTFILE])^).ProtectedAddLog(CslToStr(StrBuffer),0,False);
+  {$ENDIF}
     Result := ERR_SUCCESS;
   end
 else Result := ERR_WRITE_FAILED;
@@ -204,17 +231,36 @@ end;
 
 Function SLCB_Input(var F: TTextRec): Integer;
 var
-  BytesRead:  DWord;
-  StrBuffer:  String;
+  CharsRead:  DWord;
+  StrBuffer:  AnsiString;
+{$IFDEF Unicode}
+  Text:       String;
 begin
-If ReadConsole(F.Handle,F.BufPtr,F.BufSize,{%H-}BytesRead,nil) then
+SetLength(Text,F.BufSize);
+If ReadConsoleW(F.Handle,PChar(Text),Length(Text),{%H-}CharsRead,nil) then
   begin
-    SetLength(StrBuffer,BytesRead);
-    Move(F.Buffer,PChar(StrBuffer)^,BytesRead * SizeOf(Char));
-    TSimpleLog(Addr(F.UserData[UDI_OUTFILE])^).ProtectedAddLog(StrBuffer,0,False);
-    F.bufend := BytesRead;
+    SetLength(Text,CharsRead);
+    StrBuffer := StrToAnsi(Text);
+    Move(PAnsiChar(StrBuffer)^,F.Buffer,Length(StrBuffer) * SizeOf(AnsiChar));
+    TSimpleLog(Addr(F.UserData[UDI_OUTFILE])^).ProtectedAddLog(Text,0,False);
+    F.BufEnd := Length(StrBuffer);
     Result := ERR_SUCCESS;
   end
+{$ELSE}
+begin
+If ReadConsoleA(F.Handle,F.BufPtr,F.BufSize,{%H-}CharsRead,nil) then
+  begin
+    SetLength(StrBuffer,CharsRead);
+    Move(F.Buffer,PAnsiChar(StrBuffer)^,CharsRead * SizeOf(AnsiChar));
+  {$IFDEF Unicode}
+    TSimpleLog(Addr(F.UserData[UDI_OUTFILE])^).ProtectedAddLog(AnsiToStr(StrBuffer),0,False);
+  {$ELSE}
+    TSimpleLog(Addr(F.UserData[UDI_OUTFILE])^).ProtectedAddLog(CslToStr(StrBuffer),0,False);
+  {$ENDIF}
+    F.BufEnd := CharsRead;
+    Result := ERR_SUCCESS;
+  end
+{$ENDIF}
 else Result := ERR_READ_FAILED;
 F.BufPos := 0;
 end;
@@ -313,7 +359,7 @@ const
   def_EndStamp               = def_Breaker + sLineBreak +  '%s - Ending log' + sLineBreak + def_Breaker;
   def_AppendStamp            = def_Breaker + sLineBreak +  '%s - Appending log' + sLineBreak + def_Breaker;
   def_Header                 = HeaderLines + sLineBreak +
-                               '              Created by SimpleLog 1.3, (c)2015-2016 Frantisek Milt' +
+                               '              Created by SimpleLog 1.3, (c)2015-2017 Frantisek Milt' +
                                sLineBreak + HeaderLines;
   def_IndentNewLines         = False;
   def_ThreadLocked           = False;
@@ -346,20 +392,10 @@ If fStreamToFile <> Value then
     end
   else
     begin
-    {$IF Defined(FPC) and not Defined(Unicode) and (FPC_FULLVERSION < 20701)}
-      If FileExistsUTF8(fStreamFileName) then
-    {$ELSE}
-      If FileExists(fStreamFileName) then
-    {$IFEND}
-    {$IF Defined(FPC) and not Defined(Unicode)}
-        fStreamFile := TFileStream.Create(UTF8ToSys(fStreamFileName),fmOpenReadWrite or fStreamFileAccessRights)
+      If _FileExists(fStreamFileName) then
+        fStreamFile := TFileStream.Create(StrToRTL(fStreamFileName),fmOpenReadWrite or fStreamFileAccessRights)
       else
-        fStreamFile := TFileStream.Create(UTF8ToSys(fStreamFileName),fmCreate or fStreamFileAccessRights);
-    {$ELSE}
-        fStreamFile := TFileStream.Create(fStreamFileName,fmOpenReadWrite or fStreamFileAccessRights)
-      else
-        fStreamFile := TFileStream.Create(fStreamFileName,fmCreate or fStreamFileAccessRights);
-    {$IFEND}
+        fStreamFile := TFileStream.Create(StrToRTL(fStreamFileName),fmCreate or fStreamFileAccessRights);
       If fStreamAppend then fStreamFile.Seek(0,soEnd)
         else fStreamFile.Size := 0;
       fStreamToFile := Value;
@@ -377,20 +413,10 @@ If not AnsiSameText(fStreamFileName,Value) then
       begin
         fStreamFileName := Value;
         FreeAndNil(fStreamFile);
-      {$IF Defined(FPC) and not Defined(Unicode) and (FPC_FULLVERSION < 20701)}
-        If FileExistsUTF8(fStreamFileName) then
-      {$ELSE}
-        If FileExists(fStreamFileName) then
-      {$IFEND}
-      {$IF Defined(FPC) and not Defined(Unicode)}
-          fStreamFile := TFileStream.Create(UTF8ToSys(fStreamFileName),fmOpenReadWrite or fStreamFileAccessRights)
+        If _FileExists(fStreamFileName) then
+          fStreamFile := TFileStream.Create(StrToRTL(fStreamFileName),fmOpenReadWrite or fStreamFileAccessRights)
         else
-          fStreamFile := TFileStream.Create(UTF8ToSys(fStreamFileName),fmCreate or fStreamFileAccessRights);
-      {$ELSE}
-          fStreamFile := TFileStream.Create(fStreamFileName,fmOpenReadWrite or fStreamFileAccessRights)
-        else
-          fStreamFile := TFileStream.Create(fStreamFileName,fmCreate or fStreamFileAccessRights);
-      {$IFEND}
+          fStreamFile := TFileStream.Create(StrToRTL(fStreamFileName),fmCreate or fStreamFileAccessRights);
         If fStreamAppend then fStreamFile.Seek(0,soEnd)
           else fStreamFile.Size := 0;
       end
@@ -443,11 +469,7 @@ end;
 
 Function TSimpleLog.GetDefaultStreamFileName: String;
 begin
-{$IF Defined(FPC) and not Defined(Unicode) and (FPC_FULLVERSION < 20701)}
-Result := SysToUTF8(ParamStr(0)) + '[' + GetTimeAsStr(fTimeOfCreation,'YYYY-MM-DD-HH-NN-SS') + '].log';
-{$ELSE}
-Result := ParamStr(0) + '[' + GetTimeAsStr(fTimeOfCreation,'YYYY-MM-DD-HH-NN-SS') + '].log';
-{$IFEND}
+Result := RTLToStr(ParamStr(0)) + '[' + GetTimeAsStr(fTimeOfCreation,'YYYY-MM-DD-HH-NN-SS') + '].log';
 end;
 
 //------------------------------------------------------------------------------
@@ -474,10 +496,9 @@ var
   Temp: String;
 begin
 If fIndentNewLines then DoIndentNewLines(LogText,IndentCount);
-If fWriteToConsole and System.IsConsole then WriteLn(LogText);
+If fWriteToConsole and System.IsConsole then WriteLn(StrToCsl(LogText));
 If fInternalLog then fInternalLogObj.Add(LogText);
-For i := 0 to Pred(fExternalLogs.Count) do
-  TStrings(fExternalLogs[i]).Add(LogText);
+For i := 0 to Pred(fExternalLogs.Count) do TStrings(fExternalLogs[i]).Add(LogText);
 If fStreamToFile then
   begin
     If LineBreak then
@@ -498,7 +519,13 @@ end;
 constructor TSimpleLog.Create;
 begin
 inherited Create;
+{$WARN SYMBOL_PLATFORM OFF}
+{$IF not Defined(FPC) and (CompilerVersion >= 18)} // Delphi 2006 (not sure about that)
+fFormatSettings := TFormatSettings.Create(LOCALE_USER_DEFAULT);
+{$ELSE}
 {%H-}GetLocaleFormatSettings(LOCALE_USER_DEFAULT,fFormatSettings);
+{$IFEND}
+{$WARN SYMBOL_PLATFORM ON}
 fTimeFormat := def_TimeFormat;
 fTimeSeparator := def_TimeSeparator;
 fTimeOfCreation := Now;
@@ -683,20 +710,10 @@ var
   StringBuffer: String;
 begin
 try
-{$IF Defined(FPC) and not Defined(Unicode) and (FPC_FULLVERSION < 20701)}
-  If FileExistsUTF8(FileName) then
-{$ELSE}
-  If FileExists(FileName) then
-{$IFEND}
-{$IF Defined(FPC) and not Defined(Unicode)}
-    FileStream := TFileStream.Create(UTF8ToSys(FileName),fmOpenReadWrite or fmShareDenyWrite)
+  If _FileExists(FileName) then
+    FileStream := TFileStream.Create(StrToRTL(FileName),fmOpenReadWrite or fmShareDenyWrite)
   else
-    FileStream := TFileStream.Create(UTF8ToSys(FileName),fmCreate or fmShareDenyWrite);
-{$ELSE}
-    FileStream := TFileStream.Create(FileName,fmOpenReadWrite or fmShareDenyWrite)
-  else
-    FileStream := TFileStream.Create(FileName,fmCreate or fmShareDenyWrite);
-{$IFEND}
+    FileStream := TFileStream.Create(StrToRTL(FileName),fmCreate or fmShareDenyWrite);
   try
     If Append then FileStream.Seek(0,soEnd)
       else FileStream.Size := 0;
@@ -719,11 +736,7 @@ var
   StringBuffer: String;
 begin
 try
-{$IF Defined(FPC) and not Defined(Unicode)}
-  FileStream := TFileStream.Create(UTF8ToSys(FileName),fmOpenRead or fmShareDenyWrite);
-{$ELSE}
-  FileStream := TFileStream.Create(FileName,fmOpenRead or fmShareDenyWrite);
-{$IFEND}
+  FileStream := TFileStream.Create(StrToRTL(FileName),fmOpenRead or fmShareDenyWrite);
   try
     If not Append then fInternalLogObj.Clear;
     FileStream.Position := 0;

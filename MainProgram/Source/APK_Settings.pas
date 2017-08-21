@@ -53,15 +53,16 @@ type
   private
     fSettings:  TAPKSettingsStruct;
     Function GetSettingsPtr: PAPKSettingsStruct;
-  protected
-    procedure RunAtSystemStart(Activate: Boolean); virtual;
   public
+    class Function RunAtSystemStartIsActive: Boolean; virtual;
+    class Function RunAtSystemStartDelete: Boolean; virtual;
+    class Function RunAtSystemStartActivate: Boolean; virtual;
     constructor Create;
     constructor CreateCopy(Source: TAPKSettings);
     procedure LoadDefaultSettings; virtual;
     procedure SaveToIni(const FileName: String); virtual;
     procedure LoadFromIni(const FileName: String); virtual;
-    procedure Save; virtual;
+    procedure Save(Final: Boolean); virtual;
     procedure Load; virtual;
     Function GetShortcut: TAPKShortcut; virtual;
     procedure SetShortcut(Shortcut: TAPKShortcut); virtual;
@@ -72,9 +73,42 @@ type
 implementation
 
 uses
-  Windows, SysUtils, IniFiles,
-  DefRegistry, RawInputKeyboard
-  {$IF Defined(FPC) and not Defined(Unicode)}, LazUTF8{$IFEND};
+  Windows, SysUtils, IniFiles, ActiveX, DateUtils,
+  RawInputKeyboard, StrRect, WinTaskScheduler;
+
+{==============================================================================}
+{   Auxiliary and external functions                                           }
+{==============================================================================}
+
+type
+{$MINENUMSIZE 4}
+  EXTENDED_NAME_FORMAT = (
+    NameUnknown          = 0,
+    NameFullyQualifiedDN = 1,
+    NameSamCompatible    = 2,
+    NameDisplay          = 3,
+    NameUniqueId         = 6,
+    NameCanonical        = 7,
+    NameUserPrincipal    = 8,
+    NameCanonicalEx      = 9,
+    NameServicePrincipal = 10,
+    NameDnsDomain        = 12);
+
+Function GetUserNameExW(NameFormat: EXTENDED_NAME_FORMAT; lpNameBuffer: PWideChar; lpnSize: PULONG): ByteBool; stdcall; external 'secur32.dll';
+Function GetUserNameExA(NameFormat: EXTENDED_NAME_FORMAT; lpNameBuffer: PAnsiChar; lpnSize: PULONG): ByteBool; stdcall; external 'secur32.dll';
+Function GetUserNameEx(NameFormat: EXTENDED_NAME_FORMAT; lpNameBuffer: PChar; lpnSize: PULONG): ByteBool; stdcall; external 'secur32.dll' name {$IFDEF Unicode} 'GetUserNameExW'{$ELSE} 'GetUserNameExA'{$ENDIF};
+
+
+Function GetAccountName: WideString;
+var
+  AccountNameLen: ULONG;
+begin
+AccountNameLen := 0;
+GetUserNameExW(NameSamCompatible,nil,@AccountNameLen);
+SetLength(Result,AccountNameLen);
+If not GetUserNameExW(NameSamCompatible,PWideChar(Result),@AccountNameLen) then
+  raise Exception.CreateFmt('Cannot obtain account name (0x%.8x).',[GetLastError]);
+end;
 
 {==============================================================================}
 {------------------------------------------------------------------------------}
@@ -108,36 +142,110 @@ Result := Addr(fSettings);
 end;
 
 {------------------------------------------------------------------------------}
-{   TAPKSettings - protected methods                                           }
-{------------------------------------------------------------------------------}
-
-procedure TAPKSettings.RunAtSystemStart(Activate: Boolean);
-var
-  Reg:  TDefRegistry;
-begin
-Reg := TDefRegistry.Create;
-try
-  Reg.RootKey := HKEY_CURRENT_USER;
-  If Reg.OpenKey('\Software\Microsoft\Windows\CurrentVersion\Run',False) then
-    begin
-      If Activate then
-      {$IF Defined(FPC) and not Defined(Unicode) and (FPC_FULLVERSION >= 20701)}
-        Reg.WriteString('AppKiller 3',UTF8ToWinCP(ParamStr(0)))
-      {$ELSE}
-        Reg.WriteString('AppKiller 3',ParamStr(0))
-      {$IFEND}
-      else
-        Reg.DeleteValue('AppKiller 3');
-      Reg.CloseKey;
-    end;
-finally
-  Reg.Free;
-end;
-end;
-
-{------------------------------------------------------------------------------}
 {   TAPKSettings - public methods                                              }
 {------------------------------------------------------------------------------}
+
+const
+  TaskName    = WideString('AppKiller 3 autorun');
+  TaskComment = WideString('Automatic starting of AppKiller at system startup (user logon).');
+
+//------------------------------------------------------------------------------
+
+class Function TAPKSettings.RunAtSystemStartIsActive: Boolean;
+var
+  TaskScheduler:  ITaskScheduler;
+  Task:           ITask;
+begin
+Result := False;
+If Succeeded(CoInitialize(nil)) then
+try
+  If Succeeded(CoCreateInstance(CLSID_CTaskScheduler,nil,CLSCTX_INPROC_SERVER,IID_ITaskScheduler,TaskScheduler)) then
+  try
+    Result := Succeeded(TaskScheduler.Activate(LPCWSTR(TaskName),@IID_ITask,@Task));
+    Task := nil;  // Task.Release
+  finally
+    TaskScheduler := nil; // TaskScheduler.Release
+  end;
+finally
+  CoUninitialize;
+end;
+end;
+
+//------------------------------------------------------------------------------
+
+class Function TAPKSettings.RunAtSystemStartDelete: Boolean;
+var
+  TaskScheduler:  ITaskScheduler;
+begin
+Result := False;
+If Succeeded(CoInitialize(nil)) then
+try
+  If Succeeded(CoCreateInstance(CLSID_CTaskScheduler,nil,CLSCTX_INPROC_SERVER,IID_ITaskScheduler,TaskScheduler)) then
+  try
+    Result := Succeeded(TaskScheduler.Delete(LPCWSTR(TaskName)));
+  finally
+    TaskScheduler := nil; // TaskScheduler.Release
+  end;
+finally
+  CoUninitialize;
+end;
+end;
+
+//------------------------------------------------------------------------------
+
+class Function TAPKSettings.RunAtSystemStartActivate: Boolean;
+var
+  TaskScheduler:  ITaskScheduler;
+  Task:           ITask;
+  PersistFile:    IPersistFile;
+  TriggerID:      Word;
+  Trigger:        ITaskTrigger;
+  TriggerData:    TASK_TRIGGER;
+  CurrDate:       TDateTime;
+begin
+Result := False;
+If Succeeded(CoInitialize(nil)) then
+try
+  If Succeeded(CoCreateInstance(CLSID_CTaskScheduler,nil,CLSCTX_INPROC_SERVER,IID_ITaskScheduler,TaskScheduler)) then
+  try
+    If Succeeded(TaskScheduler.NewWorkItem(LPCWSTR(TaskName),@CLSID_Ctask,@IID_ITask,@Task)) then
+      try
+        Task.SetApplicationName(LPCWSTR(StrToWide(RTLToStr(ParamStr(0)))));
+        Task.SetWorkingDirectory(LPCWSTR(StrToWide(ExtractFilePath(RTLToStr(ParamStr(0))))));
+        Task.SetComment(LPCWSTR(TaskComment));
+        Task.SetFlags(TASK_FLAG_RUN_ONLY_IF_LOGGED_ON);
+        Task.SetAccountInformation(LPCWSTR(GetAccountName),nil);
+        If Succeeded(Task.CreateTrigger(@TriggerID,@Trigger)) then
+        try
+          FillChar({%H-}TriggerData,SizeOf(TriggerData),0);
+          TriggerData.cbTriggerSize := SizeOf(TriggerData);
+          CurrDate := Now;
+          TriggerData.wBeginYear := YearOf(CurrDate);
+          TriggerData.wBeginMonth := MonthOf(CurrDate);
+          TriggerData.wBeginDay := DayOf(CurrDate);
+          TriggerData.TriggerType := TASK_EVENT_TRIGGER_AT_LOGON;
+          Trigger.SetTrigger(@TriggerData);
+          If Succeeded(Task.QueryInterface(IID_IPersistFile,PersistFile)) then
+          try
+            Result := Succeeded(PersistFile.Save(nil,True));
+          finally
+            PersistFile := nil; // PersistFile.Release
+          end;
+        finally
+          Trigger := nil; // Trigger.Release
+        end;
+      finally
+        Task := nil; //Task.Release
+      end;
+  finally
+    TaskScheduler := nil; // TaskScheduler.Release
+  end;
+finally
+  CoUninitialize;
+end;
+end;
+
+//------------------------------------------------------------------------------
 
 constructor TAPKSettings.Create;
 begin
@@ -257,25 +365,26 @@ end;
 
 //------------------------------------------------------------------------------
 
-procedure TAPKSettings.Save;
+procedure TAPKSettings.Save(Final: Boolean);
 begin
-{$IF Defined(FPC) and not Defined(Unicode) and (FPC_FULLVERSION < 20701)}
-SaveToIni(ExtractFilePath(SysToUTF8(ParamStr(0))) + 'AppKiller.ini');
-{$ELSE}
-SaveToIni(ExtractFilePath(ParamStr(0)) + 'AppKiller.ini');
-{$IFEND}
-RunAtSystemStart(fSettings.GeneralSettings.RunAtSystemStart);
+SaveToIni(ExtractFilePath(RTLToStr(ParamStr(0))) + 'AppKiller.ini');
+If Final then
+  begin
+    If fSettings.GeneralSettings.RunAtSystemStart then
+      begin
+        If RunAtSystemStartIsActive then
+          RunAtSystemStartdelete;
+        RunAtSystemStartActivate;
+      end
+    else RunAtSystemStartDelete;
+  end;
 end;
 
 //------------------------------------------------------------------------------
 
 procedure TAPKSettings.Load;
 begin
-{$IF Defined(FPC) and not Defined(Unicode) and (FPC_FULLVERSION < 20701)}
-LoadFromIni(ExtractFilePath(SysToUTF8(ParamStr(0))) + 'AppKiller.ini');
-{$ELSE}
-LoadFromIni(ExtractFilePath(ParamStr(0)) + 'AppKiller.ini');
-{$IFEND}
+LoadFromIni(ExtractFilePath(RTLToStr(ParamStr(0))) + 'AppKiller.ini');
 end;
 
 //------------------------------------------------------------------------------
