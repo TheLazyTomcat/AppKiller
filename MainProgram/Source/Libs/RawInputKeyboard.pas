@@ -11,19 +11,33 @@
 
   Keyboard processing
 
-  ©František Milt 2016-06-02
+  ©František Milt 2017-07-18
 
-  Version 0.9.1
+  Version 0.9.2
+
+  Dependencies:
+    AuxTypes       - github.com/ncs-sniper/Lib.AuxTypes
+    BitOps         - github.com/ncs-sniper/Lib.BitOps
+    MulticastEvent - github.com/ncs-sniper/Lib.MulticastEvent
+    WndAlloc       - github.com/ncs-sniper/Lib.WndAlloc
+    WinRawInput    - github.com/ncs-sniper/Lib.WinRawInput
+    BitVector      - github.com/ncs-sniper/Lib.BitVector
+    UtilityWindow  - github.com/ncs-sniper/Lib.UtilityWindow
+    DefRegistry    - github.com/ncs-sniper/Lib.DefRegistry
+    StrRect        - github.com/ncs-sniper/Lib.StrRect
+  * SimpleCPUID    - github.com/ncs-sniper/Lib.SimpleCPUID
+
+  SimpleCPUID might not be needed, see BitOps library for details.
 
 ===============================================================================}
 unit RawInputKeyboard;
 
-{$Include 'RawInput_defs.inc'}
+{$INCLUDE 'RawInput_defs.inc'}
 
 interface
 
 uses
-  Classes, Contnrs,
+  Windows, Classes, Contnrs,
   WinRawInput, BitVector,
   RawInputCommon;
 
@@ -180,16 +194,14 @@ type
 implementation
 
 uses
-  Windows, SysUtils
-{$IF Defined(FPC) and not Defined(Unicode)}
-  , LazUTF8
-{$IFEND};
+  SysUtils, StrRect;
 
-const
 {$IF not Declared(MAPVK_VK_TO_VSC)}
+const
   MAPVK_VK_TO_VSC = 0;
 {$IFEND}
 {$IF not Declared(MAPVK_VSC_TO_VK_EX)}
+const
   MAPVK_VSC_TO_VK_EX = 3;
 {$IFEND}
 
@@ -349,9 +361,7 @@ end;
 If Flag_E0 then ScanCode := ScanCode or $100;
 SetLength(Result,32);
 SetLength(Result,GetKeyNameText(ScanCode shl 16,PChar(Result),Length(Result)));
-{$IF Defined(FPC) and not Defined(Unicode)}
-Result := WinCPToUTF8(Result);
-{$IFEND}
+Result := WinToStr(Result);
 If (Length(Result) <= 0) and NumberForUnknown then
   Result := '0x' + IntToHex(VirtualKeyCode,2);
 end;

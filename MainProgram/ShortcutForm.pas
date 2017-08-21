@@ -7,9 +7,7 @@
 -------------------------------------------------------------------------------}
 unit ShortcutForm;
 
-{$IFDEF FPC}
-  {$MODE Delphi}
-{$ENDIF}
+{$INCLUDE 'Source\APK_Defs.inc'}
 
 interface
 

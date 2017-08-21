@@ -11,14 +11,28 @@
 
   RawInput manager class
 
-  ©František Milt 2016-06-02
+  ©František Milt 2017-07-18
 
-  Version 0.9.1
+  Version 0.9.2
+
+  Dependencies:
+    AuxTypes       - github.com/ncs-sniper/Lib.AuxTypes
+    BitOps         - github.com/ncs-sniper/Lib.BitOps
+    MulticastEvent - github.com/ncs-sniper/Lib.MulticastEvent
+    WndAlloc       - github.com/ncs-sniper/Lib.WndAlloc
+    WinRawInput    - github.com/ncs-sniper/Lib.WinRawInput
+    BitVector      - github.com/ncs-sniper/Lib.BitVector
+    UtilityWindow  - github.com/ncs-sniper/Lib.UtilityWindow
+    DefRegistry    - github.com/ncs-sniper/Lib.DefRegistry
+    StrRect        - github.com/ncs-sniper/Lib.StrRect
+  * SimpleCPUID    - github.com/ncs-sniper/Lib.SimpleCPUID
+
+  SimpleCPUID might not be needed, see BitOps library for details.
 
 ===============================================================================}
 unit RawInputManager;
 
-{$Include 'RawInput_defs.inc'}
+{$INCLUDE 'RawInput_defs.inc'}
 
 interface
 
@@ -141,10 +155,7 @@ type
 implementation
 
 uses
-  SysUtils, StrUtils, DefRegistry
-{$IF Defined(FPC) and not Defined(Unicode)}
-  , LazUTF8
-{$IFEND};
+  SysUtils, StrUtils, DefRegistry, StrRect;
 
 {==============================================================================}
 {------------------------------------------------------------------------------}
@@ -451,11 +462,9 @@ If (BeginPos > 0) and (EndPos > 0) and (BeginPos < EndPos) then
           AdditionalInfo.Manufacturer := RectifyStr(Reg.ReadStringDef('Mfg',''));
           AdditionalInfo.DeviceClass := Reg.ReadStringDef('Class','');
           AdditionalInfo.ClassGUID := StringToGUID(Reg.ReadStringDef('ClassGUID','{00000000-0000-0000-0000-000000000000}'));
-        {$IF Defined(FPC) and not Defined(Unicode)}
-          AdditionalInfo.Description := WinCPToUTF8(AdditionalInfo.Description);
-          AdditionalInfo.Manufacturer := WinCPToUTF8(AdditionalInfo.Manufacturer);
-          AdditionalInfo.DeviceClass := WinCPToUTF8(AdditionalInfo.DeviceClass);          
-        {$IFEND}          
+          AdditionalInfo.Description := WinToStr(AdditionalInfo.Description);
+          AdditionalInfo.Manufacturer := WinToStr(AdditionalInfo.Manufacturer);
+          AdditionalInfo.DeviceClass := WinToStr(AdditionalInfo.DeviceClass);
           Reg.CloseKey;
         end;
     finally
@@ -475,9 +484,7 @@ GetRawInputDeviceInfo(DeviceHandle,RIDI_DEVICENAME,nil,@BufferSize);
 SetLength(DeviceInfo.Name,BufferSize);
 GetRawInputDeviceInfo(DeviceHandle,RIDI_DEVICENAME,PChar(DeviceInfo.Name),@BufferSize);
 SetLength(DeviceInfo.Name,StrLen(PChar(DeviceInfo.Name)));
-{$IF Defined(FPC) and not Defined(Unicode)}
-DeviceInfo.Name := WinCPToUTF8(DeviceInfo.Name);
-{$IFEND}
+DeviceInfo.Name := WinToStr(DeviceInfo.Name);
 BufferSize := SizeOf(RID_DEVICE_INFO);
 DeviceInfo.Info.cbSize := SizeOf(RID_DEVICE_INFO);
 GetRawInputDeviceInfo(DeviceHandle,RIDI_DEVICEINFO,Addr(DeviceInfo.Info),@BufferSize);

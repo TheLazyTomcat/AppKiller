@@ -7,15 +7,13 @@
 -------------------------------------------------------------------------------}
 unit MainForm;
 
-interface
+{$INCLUDE 'Source\APK_Defs.inc'}
 
-{$IFDEF FPC}
-  {$MODE Delphi}
-{$ENDIF}
+interface
 
 uses
   Windows, SysUtils, Variants, Classes, Graphics, Controls, Forms, Dialogs,
-  StdCtrls, CheckLst, Spin, ExtCtrls, ComCtrls, Menus,{$IFNDEF FPC}XPMan,{$ENDIF}
+  StdCtrls, CheckLst, Spin, ExtCtrls, ComCtrls, Menus,
   APK_Manager;
 
 type
@@ -46,9 +44,6 @@ type
     btnChangeShortcut: TButton;
     btnStartTermination: TButton;
     sbStatusBar: TStatusBar;
-  {$IFNDEF FPC}
-    oXPManifest: TXPManifest;
-  {$ENDIF} 
     pmnTermList: TPopupMenu;
     pmniTermList_Add: TMenuItem;
     pmniTermList_Remove: TMenuItem;
@@ -120,7 +115,7 @@ implementation
 {$ENDIF}
 
 uses
-  APK_System, APK_Strings, APK_TrayIcon, APK_Keyboard,
+  APK_System, APK_Strings, APK_TrayIcon, APK_Keyboard, APK_Settings,
   AddProcForm, ShortcutForm;
 
 procedure TfMainForm.OnTrayMenuItem(Sender: TObject; aAction: Integer);
@@ -281,7 +276,7 @@ begin
 If Visible and not ForceClose then
   begin
     FormToSettings;
-    AppKillerManager.Settings.Save;
+    AppKillerManager.Settings.Save(False);
     CanClose := False;
     Hide;
   end

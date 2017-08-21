@@ -16,6 +16,10 @@ Version 1.1
 ===============================================================================}
 unit DefRegistry;
 
+{$IFDEF FPC}
+  {$MODE ObjFPC}{$H+}
+{$ENDIF}
+
 interface
 
 uses

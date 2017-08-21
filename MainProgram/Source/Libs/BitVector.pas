@@ -9,9 +9,17 @@
 
   BitVector classes
 
-  ©František Milt 2016-03-01
+  ©František Milt 2017-07-18
 
-  Version 1.0.1 
+  Version 1.2
+
+  Dependencies:
+    AuxTypes    - github.com/ncs-sniper/Lib.AuxTypes
+    BitOps      - github.com/ncs-sniper/Lib.BitOps
+    StrRect     - github.com/ncs-sniper/Lib.StrRect
+  * SimpleCPUID - github.com/ncs-sniper/Lib.SimpleCPUID
+
+  SimpleCPUID might not be needed, see BitOps library for details.
 
 ===============================================================================}
 unit BitVector;
@@ -21,6 +29,8 @@ interface
 {$IFDEF FPC}
   {$MODE Delphi}
 {$ENDIF}
+
+{$TYPEINFO ON}
 
 uses
   Classes, AuxTypes;
@@ -42,6 +52,8 @@ type
     fChanging:    Integer;
     fChanged:     Boolean;
     fOnChange:    TNotifyEvent;
+    Function GetBytePtrBitIdx(BitIndex: Integer): PByte;
+    Function GetBytePtrByteIdx(ByteIndex: Integer): PByte;
     Function GetBit_LL(Index: Integer): Boolean;
     Function SetBit_LL(Index: Integer; Value: Boolean): Boolean;
     Function GetBit(Index: Integer): Boolean;
@@ -53,7 +65,7 @@ type
     procedure ShiftDown(Idx1,Idx2: Integer); virtual;
     procedure ShiftUp(Idx1,Idx2: Integer); virtual;
     Function MemoryEditable(MethodName: String = 'MemoryEditable'; RaiseException: Boolean = True): Boolean; virtual;
-    Function CheckIndex(Index: Integer; RaiseException: Boolean = False; MethodName: String = 'CheckIndex'): Boolean; virtual;
+    Function CheckIndex(Index: Integer; MethodName: String = 'CheckIndex'; RaiseException: Boolean = False): Boolean; virtual;
     procedure CommonInit; virtual;
     procedure ScanForPopCount; virtual;
     procedure DoOnChange; virtual;
@@ -96,7 +108,7 @@ type
     procedure AssignAND(Vector: TBitVector); overload; virtual;
     procedure AssignXOR(Memory: Pointer; Count: Integer); overload; virtual;
     procedure AssignXOR(Vector: TBitVector); overload; virtual;
-    Function Equals(Vector: TBitVector): Boolean; overload; virtual;
+    Function IsEqual(Vector: TBitVector): Boolean; virtual;
     procedure SaveToStream(Stream: TStream); virtual;
     procedure LoadFromStream(Stream: TStream); virtual;
     procedure SaveToFile(const FileName: String); virtual;
@@ -140,54 +152,46 @@ type
 implementation
 
 uses
-  SysUtils, Math
-  {$IF Defined(FPC) and not Defined(Unicode)}
-  (*
-    If compiler throws error that LazUTF8 unit cannot be found, you have to
-    add LazUtils to required packages (Project > Project Inspector).
-  *)
-  , LazUTF8
-  {$IFEND};
-
-const
-  AllocDeltaBits  = 32;
-  AllocDeltaBytes = 4;
-
-{$IFDEF ENDIAN_BIG}
-Function SwapEndian(Value: UInt32): UInt32;
-begin
-Result := UInt32((Value and $000000FF shl 24) or (Value and $0000FF00 shl 8) or
-                 (Value and $00FF0000 shr 8) or (Value and $FF000000 shr 24));
-end;
-{$ENDIF}
+  SysUtils, Math, BitOps, StrRect;
 
 {==============================================================================}
 {------------------------------------------------------------------------------}
 {                         TBitVector - implementation                          }
 {------------------------------------------------------------------------------}
-{==============================================================================}
+{==============================================================================}  
+
+const
+  AllocDeltaBits  = 128;
+  AllocDeltaBytes = AllocDeltaBits div 8;
 
 {==============================================================================}
 {   TBitVector - private methods                                               }
 {==============================================================================}
 
+Function TBitVector.GetBytePtrBitIdx(BitIndex: Integer): PByte;
+begin
+Result := {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(BitIndex shr 3));
+end;
+
+//------------------------------------------------------------------------------
+
+Function TBitVector.GetBytePtrByteIdx(ByteIndex: Integer): PByte;
+begin
+Result := {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(ByteIndex));
+end;
+
+//------------------------------------------------------------------------------
+
 Function TBitVector.GetBit_LL(Index: Integer): Boolean;
 begin
-Result := ({%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(Index shr 3))^ shr (Index and 7)) and 1 <> 0;
+Result := BT(GetBytePtrBitIdx(Index)^,Index and 7);
 end;
 
 //------------------------------------------------------------------------------
 
 Function TBitVector.SetBit_LL(Index: Integer; Value: Boolean): Boolean;
-var
-  OldByte:  Byte;
 begin
-OldByte := {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(Index shr 3))^;
-Result := (OldByte shr (Index and 7)) and 1 <> 0;
-If Value then
-  {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(Index shr 3))^ := OldByte or (1 shl (Index and 7))
-else
-  {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(Index shr 3))^ := OldByte and not (1 shl (Index and 7));
+Result := BitSetTo(GetBytePtrBitIdx(Index)^,Index and 7,Value);
 end;
 
 //------------------------------------------------------------------------------
@@ -203,16 +207,13 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TBitVector.SetBit(Index: Integer; Value: Boolean);
-var
-  OldValue: Boolean;
 begin
 If CheckIndex(Index) then
   begin
-    OldValue := SetBit_LL(Index,Value);
-    If Value <> OldValue then
+    If Value <> SetBit_LL(Index,Value) then
       begin
-        If OldValue then Dec(fPopCount)
-          else Inc(fPopCount);
+        If Value then Inc(fPopCount)
+          else Dec(fPopCount);
         DoOnChange;
       end;
   end
@@ -223,7 +224,7 @@ end;
 
 Function TBitVector.GetCapacity: Integer;
 begin
-Result := fMemSize shl 3;
+Result := Integer(fMemSize shl 3);
 end;
 
 //------------------------------------------------------------------------------
@@ -267,17 +268,15 @@ If MemoryEditable('SetCount') then
           begin
             BeginChanging;
             try
-              If Value > Capacity then Capacity := Value;
+              If Value > Capacity then
+                Capacity := Value;
               If Value > fCount then
                 begin
+                  // reset added bits
                   If (fCount and 7) <> 0 then
-                    For i := fCount to Min(Pred(Value),fCount or 7) do
-                      SetBit_LL(i,False);
-                  For i := Ceil(fCount / 8) to Pred(Value shr 3) do
-                    {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(i))^ := 0;
-                  If ((Value and 7) <> 0) and ((Value and not 7) >= fCount) then
-                    For i := (Value and not 7) to Pred(Value) do
-                      SetBit_LL(i,False);
+                    SetBitsValue(GetBytePtrBitIdx(Pred(fCount))^,0,fCount and 7,7);
+                  For i := Ceil(fCount / 8) to (Pred(Value) shr 3) do
+                    GetBytePtrByteIdx(i)^ := 0;
                   fCount := Value;
                 end
               else
@@ -301,76 +300,73 @@ end;
 
 procedure TBitVector.ShiftDown(Idx1,Idx2: Integer);
 var
-  i:      Integer;
-  Temp:   UInt16;
   Carry:  Boolean;
+  i:      Integer;
+  Buffer: UInt16;  
 begin
 If Idx2 > Idx1 then
   begin
-    If (Idx2 shr 3) - (Idx1 shr 3) > 1 then
+    If (Idx1 shr 3) = (Idx2 shr 3)  then
       begin
+        // shift is done inside of one byte
+        SetBitsValue(GetBytePtrBitIdx(Idx1)^,GetBytePtrBitIdx(Idx1)^ shr 1,Idx1 and 7,Idx2 and 7);
+      end
+    else
+      begin
+        // shift is done across at least one byte boundary
         // shift last byte and preserve shifted-out bit
         Carry := GetBit_LL(Idx2 and not 7);
-        For i := (Idx2 and not 7) to Pred(Idx2) do
-          SetBit_LL(i,GetBit_LL(i + 1));
+        SetBitsValue(GetBytePtrBitIdx(Idx2)^,GetBytePtrBitIdx(Idx2)^ shr 1,0,Idx2 and 7);
         // shift whole bytes
         For i := Pred(Idx2 shr 3) downto Succ(Idx1 shr 3) do
           begin
-            If Carry then
-              Temp := UInt16({%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(i))^) or $0100
-            else
-              Temp := UInt16({%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(i))^) and $FEFF;
-            Carry := (Temp and 1) <> 0;
-            {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(i))^ := Byte(Temp shr 1);
+            Buffer := GetBytePtrByteIdx(i)^;
+            BitSetTo(Buffer,8,Carry);
+            Carry := (Buffer and 1) <> 0;
+            GetBytePtrByteIdx(i)^ := Byte(Buffer shr 1);
           end;
         // shift first byte and store carry
-        For i := Idx1 to Pred(Idx1 or 7) do
-          SetBit_LL(i,GetBit_LL(i + 1));
+        SetBitsValue(GetBytePtrBitIdx(Idx1)^,GetBytePtrBitIdx(Idx1)^ shr 1,Idx1 and 7,7);
         SetBit_LL(Idx1 or 7,Carry);
-      end
-    else
-      For i := Idx1 to Pred(Idx2) do
-        SetBit_LL(i,GetBit_LL(i + 1));
+      end;
   end
 else raise Exception.CreateFmt('TBitVector.ShiftDown: First index (%d) must be smaller or equal to the second index (%d).',[Idx1,Idx2]);
 end;
 
 //------------------------------------------------------------------------------
-
 procedure TBitVector.ShiftUp(Idx1,Idx2: Integer);
 var
-  i:      Integer;
-  Temp:   UInt16;
   Carry:  Boolean;
+  i:      Integer;
+  Buffer: UInt16;
 begin
 If Idx2 > Idx1 then
   begin
-    If (Idx2 shr 3) - (Idx1 shr 3) > 1 then
+    If (Idx1 shr 3) = (Idx2 shr 3)  then
       begin
+        // shift is done inside of one byte
+        SetBitsValue(GetBytePtrBitIdx(Idx1)^,Byte(GetBytePtrBitIdx(Idx1)^ shl 1),Idx1 and 7,Idx2 and 7);
+      end
+    else
+      begin
+        // shift is done across at least one byte boundary
         // shift first byte and preserve shifted-out bit
         Carry := GetBit_LL(Idx1 or 7);
-        For i := (Idx1 or 7) downto Succ(Idx1) do
-          SetBit_LL(i,GetBit_LL(i - 1));
+        SetBitsValue(GetBytePtrBitIdx(Idx1)^,Byte(GetBytePtrBitIdx(Idx1)^ shl 1),Idx1 and 7,7);
         // shift whole bytes
         For i := Succ(Idx1 shr 3) to Pred(Idx2 shr 3) do
           begin
-            If Carry then
-              Temp := (UInt16({%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(i))^) shl 1) or 1
-            else
-              Temp := (UInt16({%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(i))^) shl 1) and not 1;
-            Carry := (Temp and $100) <> 0;
-            {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(i))^ := Byte(Temp);
+            Buffer := UInt16(GetBytePtrByteIdx(i)^ shl 1);
+            BitSetTo(Buffer,0,Carry);
+            Carry := (Buffer and $100) <> 0;
+            GetBytePtrByteIdx(i)^ := Byte(Buffer);
           end;
         // shift last byte and store carry
-        For i := Idx2 downto Succ(Idx2 and not 7) do
-          SetBit_LL(i,GetBit_LL(i - 1));
+        SetBitsValue(GetBytePtrBitIdx(Idx2)^,Byte(GetBytePtrBitIdx(Idx2)^ shl 1),0,Idx2 and 7);
         SetBit_LL(Idx2 and not 7,Carry);
-      end
-    else
-      For i := Idx2 downto Succ(Idx1) do
-        SetBit_LL(i,GetBit_LL(i - 1));
+      end;
   end
-else raise Exception.CreateFmt('TBitVector.ShiftUp: First index (%d) must be smaller or equal to the second index (%d).',[Idx1,Idx2]);
+else raise Exception.CreateFmt('TBitVector.ShiftDown: First index (%d) must be smaller or equal to the second index (%d).',[Idx1,Idx2]);
 end;
 
 //------------------------------------------------------------------------------
@@ -389,7 +385,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-Function TBitVector.CheckIndex(Index: Integer; RaiseException: Boolean = False; MethodName: String = 'CheckIndex'): Boolean;
+Function TBitVector.CheckIndex(Index: Integer; MethodName: String = 'CheckIndex'; RaiseException: Boolean = False): Boolean;
 begin
 Result := (Index >= 0) and (Index < fCount);
 If not Result and RaiseException then
@@ -411,38 +407,14 @@ end;
 procedure TBitVector.ScanForPopCount;
 var
   i:        Integer;
-  WorkPtr:  PByte;
-
-  Function CountBits(Buff: Byte; MaxBits: Byte = 8): Integer;
-  var
-    ii: Integer;
-  begin
-    Result := 0;
-    If MaxBits >= 8 then
-      case Buff of
-          0:  Exit; // do nothing, result is already 0
-        255:  Result := 8;
-      else
-        For ii := 0 to 7 do
-          If ((Buff shr ii) and 1) <> 0 then Inc(Result);
-      end
-    else
-      For ii := 0 to Pred(MaxBits) do
-        If ((Buff shr ii) and 1) <> 0 then Inc(Result);
-  end;
-
 begin
 fPopCount := 0;
 If fCount > 0 then
   begin
-    WorkPtr := PByte(fMemory);
     For i := 0 to Pred(fCount shr 3) do
-      begin
-        Inc(fPopCount,CountBits(WorkPtr^));
-        Inc(WorkPtr);
-      end;
+      Inc(fPopCount,BitOps.PopCount(GetBytePtrByteIdx(i)^));
     If (fCount and 7) > 0 then
-      Inc(fPopCount,CountBits(WorkPtr^,fCount and 7));
+      Inc(fPopCount,BitOps.PopCount(Byte(GetBytePtrBitIdx(fCount)^ and ($FF shr (8 - (fCount and 7))))));
   end;
 end;
 
@@ -627,7 +599,7 @@ end;
 
 procedure TBitVector.Exchange(Index1, Index2: Integer);
 begin
-If CheckIndex(Index1,True,'Exchange') and CheckIndex(Index2,True,'Exchange') then
+If CheckIndex(Index1,'Exchange',True) and CheckIndex(Index2,'Exchange',True) then
   begin
     SetBit_LL(Index2,SetBit_LL(Index1,GetBit_LL(Index2)));
     DoOnChange;
@@ -640,19 +612,17 @@ procedure TBitVector.Move(SrcIdx, DstIdx: Integer);
 var
   Value:  Boolean;
 begin
-If CheckIndex(SrcIdx,True,'Move') and CheckIndex(DstIdx,True,'Move') then
-  begin
-    If SrcIdx <> DstIdx then
-      begin
-        Value := GetBit_LL(SrcIdx);
-        If SrcIdx < DstIdx then
-          ShiftDown(SrcIdx,DstIdx)
-        else
-          ShiftUp(DstIdx,SrcIdx);
-        SetBit_LL(DstIdx,Value);
-        DoOnChange;
-      end;
-  end;
+If SrcIdx <> DstIdx then
+  If CheckIndex(SrcIdx,'Move',True) and CheckIndex(DstIdx,'Move',True) then
+    begin
+      Value := GetBit_LL(SrcIdx);
+      If SrcIdx < DstIdx then
+        ShiftDown(SrcIdx,DstIdx)
+      else
+        ShiftUp(DstIdx,SrcIdx);
+      SetBit_LL(DstIdx,Value);
+      DoOnChange;
+    end;
 end;
 
 //------------------------------------------------------------------------------
@@ -661,25 +631,23 @@ procedure TBitVector.Fill(FromIdx, ToIdx: Integer; Value: Boolean);
 var
   i:  Integer;
 begin
-If CheckIndex(FromIdx,True,'Fill') and CheckIndex(ToIdx,True,'Fill') then
-  begin
-    If FromIdx > ToIdx then
-      begin
-        i := FromIdx;
-        FromIdx := ToIdx;
-        ToIdx := i;
-      end;
-    If ((FromIdx and 7) <> 0) or ((ToIdx - FromIdx) < 7) then
-      For i := FromIdx to Min(ToIdx,FromIdx or 7) do
-        SetBit_LL(i,Value);
-    For i := Ceil(FromIdx / 8) to Pred(Succ(ToIdx) shr 3) do
-      {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(i))^ := Ord(Value) * $FF;
-    If ((ToIdx and 7) < 7) and ((ToIdx and not 7) > FromIdx) then
-      For i := (ToIdx and not 7) to ToIdx do
-        SetBit_LL(i,Value);
-    ScanForPopCount;
-    DoOnChange;
-  end;
+If FromIdx <= ToIdx then
+  If CheckIndex(FromIdx,'Fill',True) and CheckIndex(ToIdx,'Fill',True) then
+    begin
+      If FromIdx = ToIdx then
+        SetBit(FromIdx,Value)
+      else
+        begin
+          If ((FromIdx and 7) <> 0) or ((ToIdx - FromIdx) < 7) then
+            SetBitsValue(GetBytePtrBitIdx(FromIdx)^,$FF * Ord(Value),FromIdx and 7,Min(ToIdx - (FromIdx and not 7),7));
+          For i := Ceil(FromIdx / 8) to Pred(Succ(ToIdx) shr 3) do
+            GetBytePtrByteIdx(i)^ := $FF * Ord(Value);
+          If ((ToIdx and 7) < 7) and ((ToIdx and not 7) > FromIdx) then
+            SetBitsValue(GetBytePtrBitIdx(ToIdx)^,$FF * Ord(Value),0,ToIdx and 7);
+          ScanForPopCount;
+          DoOnChange;
+        end;
+    end;
 end;
 
 //   ---   ---   ---   ---   ---   ---   ---   ---   ---   ---   ---   ---   ---
@@ -690,10 +658,8 @@ var
 begin
 If fCount > 0 then
   begin
-    For i := 0 to Pred(fCount shr 3) do
-      {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(i))^ := $FF * Ord(Value);
-    For i := (fCount and not 7) to Pred(fCount) do
-      SetBit_LL(i,Value);
+    For i := 0 to (Pred(fCount) shr 3) do
+      GetBytePtrByteIdx(i)^ := $FF * Ord(Value);
     fPopCount := fCount * Ord(Value);      
     DoOnChange;
   end;
@@ -705,25 +671,23 @@ procedure TBitVector.Complement(FromIdx, ToIdx: Integer);
 var
   i:  Integer;
 begin
-If CheckIndex(FromIdx,True,'Complement') and CheckIndex(ToIdx,True,'Complement') then
-  begin
-    If FromIdx > ToIdx then
-      begin
-        i := FromIdx;
-        FromIdx := ToIdx;
-        ToIdx := i;
+If FromIdx <= ToIdx then
+  If CheckIndex(FromIdx,'Complement',True) and CheckIndex(ToIdx,'Complement',True) then
+    begin
+      If FromIdx = ToIdx then
+        SetBit(FromIdx,not GetBit_LL(FromIdx))
+      else
+        begin
+          If ((FromIdx and 7) <> 0) or ((ToIdx - FromIdx) < 7) then
+            SetBitsValue(GetBytePtrBitIdx(FromIdx)^,not GetBytePtrBitIdx(FromIdx)^,FromIdx and 7,Min(ToIdx - (FromIdx and not 7),7));
+          For i := Ceil(FromIdx / 8) to Pred(Succ(ToIdx) shr 3) do
+            GetBytePtrByteIdx(i)^ := not GetBytePtrByteIdx(i)^;
+          If ((ToIdx and 7) < 7) and ((ToIdx and not 7) > FromIdx) then
+            SetBitsValue(GetBytePtrBitIdx(ToIdx)^,not GetBytePtrBitIdx(ToIdx)^,0,ToIdx and 7);
+        ScanForPopCount;
+        DoOnChange;
       end;
-    If ((FromIdx and 7) <> 0) or ((ToIdx - FromIdx) < 7) then
-      For i := FromIdx to Min(ToIdx,FromIdx or 7) do
-        SetBit_LL(i,not GetBit_LL(i));
-    For i := Ceil(FromIdx / 8) to Pred(Succ(ToIdx) shr 3) do
-      {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(i))^ := not {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(i))^;
-    If ((ToIdx and 7) < 7) and ((ToIdx and not 7) > FromIdx) then
-      For i := (ToIdx and not 7) to ToIdx do
-        SetBit_LL(i,not GetBit_LL(i));
-    ScanForPopCount;
-    DoOnChange;
-  end;
+    end;
 end;
 
 //   ---   ---   ---   ---   ---   ---   ---   ---   ---   ---   ---   ---   ---
@@ -734,10 +698,8 @@ var
 begin
 If fCount > 0 then
   begin
-    For i := 0 to Pred(fCount shr 3) do
-      {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(i))^ := not {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(i))^;
-    For i := (fCount and not 7) to Pred(fCount) do
-      SetBit_LL(i,not GetBit_LL(i));
+    For i := 0 to (Pred(fCount) shr 3) do
+      GetBytePtrByteIdx(i)^ := not GetBytePtrByteIdx(i)^;
     fPopCount := fCount - fPopCount;
     DoOnChange;
   end;
@@ -789,29 +751,15 @@ Function TBitVector.FirstSet: Integer;
 var
   i:        Integer;
   WorkByte: Byte;
-
-  Function ScanByte(Value: Byte): Integer;
-  var
-    ii: Integer;
-  begin
-    For ii := 0 to 7 do
-      If (Value shr ii) and 1 <> 0 then
-        begin
-          Result := ii;
-          Exit;
-        end;
-    raise Exception.Create('TBitVector.FirstSet.ScanByte: Operation not allowed.');
-  end;
-
 begin
 If fCount > 0 then
   begin
     For i := 0 to Pred(fCount shr 3) do
       begin
-        WorkByte := {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(i))^;
+        WorkByte := GetBytePtrByteIdx(i)^;
         If WorkByte <> 0 then
           begin
-            Result := (i * 8) + ScanByte(WorkByte);
+            Result := (i * 8) + BSF(WorkByte);
             Exit;
           end;
       end;
@@ -832,29 +780,15 @@ Function TBitVector.FirstClean: Integer;
 var
   i:        Integer;
   WorkByte: Byte;
-
-  Function ScanByte(Value: Byte): Integer;
-  var
-    ii: Integer;
-  begin
-    For ii := 0 to 7 do
-      If (Value shr ii) and 1 = 0 then
-        begin
-          Result := ii;
-          Exit;
-        end;
-    raise Exception.Create('TBitVector.FirstClean.ScanByte: Operation not allowed.');
-  end;
-
 begin
 If fCount > 0 then
   begin
     For i := 0 to Pred(fCount shr 3) do
       begin
-        WorkByte := {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(i))^;
+        WorkByte := GetBytePtrByteIdx(i)^;
         If WorkByte <> $FF then
           begin
-            Result := (i * 8) + ScanByte(WorkByte);
+            Result := (i * 8) + BSF(not WorkByte);
             Exit;
           end;
       end;
@@ -875,20 +809,6 @@ Function TBitVector.LastSet: Integer;
 var
   i:        Integer;
   WorkByte: Byte;
-
-  Function ScanByte(Value: Byte): Integer;
-  var
-    ii: Integer;
-  begin
-    For ii := 7 downto 0 do
-      If (Value shr ii) and 1 <> 0 then
-        begin
-          Result := ii;
-          Exit;
-        end;
-    raise Exception.Create('TBitVector.LastSet.ScanByte: Operation not allowed.');
-  end;
-
 begin
 If fCount > 0 then
   begin
@@ -900,10 +820,10 @@ If fCount > 0 then
         end;
     For i := Pred(fCount shr 3) downto 0 do
       begin
-        WorkByte := {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(i))^;
+        WorkByte := GetBytePtrByteIdx(i)^;
         If WorkByte <> 0 then
           begin
-            Result := (i * 8) + ScanByte(WorkByte);
+            Result := (i * 8) + BSR(WorkByte);
             Exit;
           end;
       end;
@@ -918,20 +838,6 @@ Function TBitVector.LastClean: Integer;
 var
   i:        Integer;
   WorkByte: Byte;
-
-  Function ScanByte(Value: Byte): Integer;
-  var
-    ii: Integer;
-  begin
-    For ii := 7 downto 0 do
-      If (Value shr ii) and 1 = 0 then
-        begin
-          Result := ii;
-          Exit;
-        end;
-    raise Exception.Create('TBitVector.LastSet.ScanByte: Operation not allowed.');
-  end;
-
 begin
 If fCount > 0 then
   begin
@@ -943,10 +849,10 @@ If fCount > 0 then
         end;
     For i := Pred(fCount shr 3) downto 0 do
       begin
-        WorkByte := {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(i))^;
+        WorkByte := GetBytePtrByteIdx(i)^;
         If WorkByte <> $FF then
           begin
-            Result := (i * 8) + ScanByte(WorkByte);
+            Result := (i * 8) + BSR(not WorkByte);
             Exit;
           end;
       end;
@@ -959,84 +865,54 @@ end;
 
 procedure TBitVector.Append(Memory: Pointer; Count: Integer);
 var
+  Shift:      Integer;
   i:          Integer;
-  WorkByte:   Byte;
-  TempVector: TBitVector;
+  ByteBuff:   PByte;
 begin
-If MemoryEditable('Append') then
+If MemoryEditable('Append') and (Count > 0) then
   begin
     If (fCount and 7) = 0 then
       begin
         Capacity := fCount + Count;
-        System.Move(Memory^,{%H-}Pointer({%H-}PtrUInt(fMemory) + PtrUInt(fCount shr 3))^,Count shr 3);
-        If (Count and 7) <> 0 then
-          begin
-            WorkByte := {%H-}PByte({%H-}PtrUInt(Memory) + PtrUInt(Count shr 3))^;
-            For i := 0 to Pred(Count - (Count and not 7)) do
-              SetBit_LL(fCount + (Count and not 7) + i,(WorkByte shr i) and 1 <> 0);
-          end;    
-        Inc(fCount,Count);
-        ScanForPopCount;
-        DoOnChange;
+        System.Move(Memory^,GetBytePtrByteIdx(fCount shr 3)^,Ceil(Count / 8));
       end
     else
       begin
-        TempVector := TBitVector.Create(Memory,Count);
-        try
-          Append(TempVector);
-        finally
-          TempVector.Free;
-        end;
+        Capacity := Succ(fCount or 7) + Count;
+        System.Move(Memory^,GetBytePtrByteIdx(Succ(fCount shr 3))^,Ceil(Count / 8));
+        Shift := 8 - (fCount and 7);
+        For i := (fCount shr 3) to Pred((fCount shr 3) + Ceil(Count / 8)) do
+          begin
+            ByteBuff := GetBytePtrByteIdx(i + 1);
+            SetBitsValue(GetBytePtrByteIdx(i)^,Byte(ByteBuff^ shl (8 - Shift)),8 - Shift,7);
+            ByteBuff^ := ByteBuff^ shr Shift;
+          end;
       end;
+    Inc(fCount,Count);
+    ScanForPopCount;
+    DoOnChange;
   end;
 end;
 
 //   ---   ---   ---   ---   ---   ---   ---   ---   ---   ---   ---   ---   ---
 
 procedure TBitVector.Append(Vector: TBitVector);
-var
-  i:  Integer;
 begin
-If MemoryEditable('Append') then
-  begin
-    If (fCount and 7) <> 0 then
-      begin
-        Capacity := fCount + Vector.Count;
-        For i := 0 to Vector.HighIndex do
-          SetBit_LL(fCount + i,Vector.GetBit_LL(i));  
-        Inc(fCount,Vector.Count);
-        ScanForPopCount;
-        DoOnChange;
-      end
-    else Append(Vector.Memory,Vector.Count);
-  end;
+Append(Vector.Memory,Vector.Count);
 end;
 
 //------------------------------------------------------------------------------
 
 procedure TBitVector.Assign(Memory: Pointer; Count: Integer);
-var
-  i:        Integer;
-  WorkByte: Byte;
 begin
 If MemoryEditable('Assign') then
   begin
-    BeginChanging;
-    try
+    If Count > Capacity then
       Capacity := Count;
-      System.Move(Memory^,fMemory^,Count shr 3);
-      If (Count and 7) <> 0 then
-        begin
-          WorkByte := {%H-}PByte({%H-}PtrUInt(Memory) + PtrUInt(Count shr 3))^;
-          For i := (Count and not 7) to Pred(Count) do
-            SetBit_LL(i,(WorkByte shr (i and 7)) and 1 <> 0);
-        end;
-      fCount := Count;
-      ScanForPopCount;
-      DoOnChange;
-    finally
-      EndChanging;
-    end;
+    System.Move(Memory^,fMemory^,Ceil(Count / 8));
+    fCount := Count;
+    ScanForPopCount;
+    DoOnChange;
   end;
 end;
 
@@ -1051,8 +927,7 @@ end;
 
 procedure TBitVector.AssignOR(Memory: Pointer; Count: Integer);
 var
-  i:        Integer;
-  WorkByte: Byte;
+  i:  Integer;
 begin
 If MemoryEditable('AssignOR') then
   begin
@@ -1060,14 +935,10 @@ If MemoryEditable('AssignOR') then
     try
       If Count > fCount then Self.Count := Count;
       For i := 0 to Pred(Count shr 3) do
-        {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(i))^ := {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(i))^ or
-                                                           {%H-}PByte({%H-}PtrUInt(Memory) + PtrUInt(i))^;
+        GetBytePtrByteIdx(i)^ := GetBytePtrByteIdx(i)^ or {%H-}PByte({%H-}PtrUInt(Memory) + PtrUInt(i))^;
       If (Count and 7) <> 0 then
-        begin
-          WorkByte := {%H-}PByte({%H-}PtrUInt(Memory) + PtrUInt(Count shr 3))^;
-          For i := (Count and not 7) to Pred(Count) do
-            SetBit_LL(i,GetBit_LL(i) or ((WorkByte shr (i and 7)) and 1 <> 0));
-        end;
+        For i := (Count and not 7) to Pred(Count) do
+          SetBit_LL(i,GetBit_LL(i) or (({%H-}PByte({%H-}PtrUInt(Memory) + PtrUInt(Count shr 3))^ shr (i and 7)) and 1 <> 0));
       ScanForPopCount;
       DoOnChange;
     finally
@@ -1087,8 +958,7 @@ end;
 
 procedure TBitVector.AssignAND(Memory: Pointer; Count: Integer);
 var
-  i:        Integer;
-  WorkByte: Byte;
+  i:  Integer;
 begin
 If MemoryEditable('AssignAND') then
   begin
@@ -1098,17 +968,13 @@ If MemoryEditable('AssignAND') then
         begin
           i := fCount;
           Self.Count := Count;
-          Fill(i,Pred(fCount),True);
+          Fill(i,Pred(fCount),True); 
         end;
       For i := 0 to Pred(Count shr 3) do
-        {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(i))^ := {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(i))^ and 
-                                                           {%H-}PByte({%H-}PtrUInt(Memory) + PtrUInt(i))^;
+        GetBytePtrByteIdx(i)^ := GetBytePtrByteIdx(i)^ and {%H-}PByte({%H-}PtrUInt(Memory) + PtrUInt(i))^;
       If (Count and 7) <> 0 then
-        begin
-          WorkByte := {%H-}PByte({%H-}PtrUInt(Memory) + PtrUInt(Count shr 3))^;
-          For i := (Count and not 7) to Pred(Count) do
-            SetBit_LL(i,GetBit_LL(i) and ((WorkByte shr (i and 7)) and 1 <> 0));
-        end;
+        For i := (Count and not 7) to Pred(Count) do
+          SetBit_LL(i,GetBit_LL(i) and (({%H-}PByte({%H-}PtrUInt(Memory) + PtrUInt(Count shr 3))^ shr (i and 7)) and 1 <> 0));
       ScanForPopCount;
       DoOnChange;
     finally
@@ -1128,8 +994,7 @@ end;
 
 procedure TBitVector.AssignXOR(Memory: Pointer; Count: Integer);
 var
-  i:        Integer;
-  WorkByte: Byte;
+  i:  Integer;
 begin
 If MemoryEditable('AssignXOR') then
   begin
@@ -1137,14 +1002,10 @@ If MemoryEditable('AssignXOR') then
     try
       If Count > fCount then Self.Count := Count;
       For i := 0 to Pred(Count shr 3) do
-        {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(i))^ := {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(i))^ xor
-                                                           {%H-}PByte({%H-}PtrUInt(Memory) + PtrUInt(i))^;
+        GetBytePtrByteIdx(i)^ := GetBytePtrByteIdx(i)^ xor {%H-}PByte({%H-}PtrUInt(Memory) + PtrUInt(i))^;
       If (Count and 7) <> 0 then
-        begin
-          WorkByte := {%H-}PByte({%H-}PtrUInt(Memory) + PtrUInt(Count shr 3))^;
-          For i := (Count and not 7) to Pred(Count) do
-            SetBit_LL(i,GetBit_LL(i) xor ((WorkByte shr (i and 7)) and 1 <> 0));
-        end;
+        For i := (Count and not 7) to Pred(Count) do
+          SetBit_LL(i,GetBit_LL(i) xor (({%H-}PByte({%H-}PtrUInt(Memory) + PtrUInt(Count shr 3))^ shr (i and 7)) and 1 <> 0));
       ScanForPopCount;
       DoOnChange;
     finally
@@ -1162,7 +1023,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-Function TBitVector.Equals(Vector: TBitVector): Boolean;
+Function TBitVector.IsEqual(Vector: TBitVector): Boolean;
 var
   i:  Integer;
 begin
@@ -1170,7 +1031,7 @@ Result := False;
 If (fCount = Vector.Count) and (fPopCount = Vector.PopCount) then
   begin
     For i := 0 to Pred(fCount shr 3) do
-      If {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(i))^ <> {%H-}PByte({%H-}PtrUInt(Vector.Memory) + PtrUInt(i))^ then Exit;
+      If GetBytePtrByteIdx(i)^ <> {%H-}PByte({%H-}PtrUInt(Vector.Memory) + PtrUInt(i))^ then Exit;
     If (fCount and 7) <> 0 then
       For i := (fCount and not 7) to Pred(fCount) do
         If GetBit_LL(i) <> Vector[i] then Exit;
@@ -1187,7 +1048,7 @@ begin
 Stream.WriteBuffer(fMemory^,fCount shr 3);
 If (fCount and 7) <> 0 then
   begin
-    TempByte := {%H-}PByte({%H-}PtrUInt(fMemory) + PtrUInt(fCount shr 3))^ and (Byte($FF) shr (8 - (fCount and 7)));
+    TempByte := SetBits(0,GetBytePtrByteIdx(fCount shr 3)^,0,Pred(fCount and 7));
     Stream.WriteBuffer(TempByte,1);
   end;
 end;
@@ -1199,7 +1060,7 @@ begin
 If MemoryEditable('LoadFromStream') then
   begin
     Count := Integer((Stream.Size - Stream.Position) shl 3);
-    Stream.ReadBuffer(fMemory,fCount shr 3);
+    Stream.ReadBuffer(fMemory^,fCount shr 3);
     ScanForPopCount;
     DoOnChange;
   end;
@@ -1211,11 +1072,7 @@ procedure TBitVector.SaveToFile(const FileName: String);
 var
   FileStream: TFileStream;
 begin
-{$IF Defined(FPC) and not Defined(Unicode)}
-FileStream := TFileStream.Create(UTF8ToSys(FileName),fmCreate or fmShareExclusive);
-{$ELSE}
-FileStream := TFileStream.Create(FileName,fmCreate or fmShareExclusive);
-{$IFEND}
+FileStream := TFileStream.Create(StrToRTL(FileName),fmCreate or fmShareExclusive);
 try
   SaveToStream(FileStream);
 finally
@@ -1229,11 +1086,7 @@ procedure TBitVector.LoadFromFile(const FileName: String);
 var
   FileStream: TFileStream;
 begin
-{$IF Defined(FPC) and not Defined(Unicode)}
-FileStream := TFileStream.Create(UTF8ToSys(FileName),fmOpenRead or fmShareDenyWrite);
-{$ELSE}
-FileStream := TFileStream.Create(FileName,fmOpenRead or fmShareDenyWrite);
-{$IFEND}
+FileStream := TFileStream.Create(StrToRTL(FileName),fmOpenRead or fmShareDenyWrite);
 try
   LoadFromStream(FileStream);
 finally
@@ -1292,33 +1145,19 @@ Function TBitVectorStatic32.FirstSet: Integer;
 var
   i:      Integer;
   Buffer: UInt32;
-
-  Function ScanBuffer(Value: UInt32): Integer;
-  var
-    ii: Integer;
-  begin
-    For ii := 0 to 31 do
-      If (Value shr ii) and 1 <> 0 then
-        begin
-          Result := ii;
-          Exit;
-        end;
-    raise Exception.Create('TBitVectorStatic32.FirstSet.ScanBuffer: Operation not allowed.');
-  end;
-
 begin
 Result := -1;
 If fCount > 0 then
   For i := 0 to Pred(fCount shr 5) do
     begin
     {$IFDEF ENDIAN_BIG}
-      Buffer := SwapEndian({%H-}PUInt32({%H-}PtrUInt(fMemory) + PtrUInt(i * SizeOf(UInt32)))^);
+      Buffer := EndianSwap(PUInt32(GetBytePtrByteIdx(i * SizeOf(UInt32)))^);
     {$ELSE}
-      Buffer := {%H-}PUInt32({%H-}PtrUInt(fMemory) + PtrUInt(i * SizeOf(UInt32)))^;
+      Buffer := PUInt32(GetBytePtrByteIdx(i * SizeOf(UInt32)))^;
     {$ENDIF}
       If Buffer <> 0 then
         begin
-          Result := (i * 32) + ScanBuffer(Buffer);
+          Result := (i * 32) + BSF(Buffer);
           Break;
         end;
     end;
@@ -1330,33 +1169,19 @@ Function TBitVectorStatic32.FirstClean: Integer;
 var
   i:      Integer;
   Buffer: UInt32;
-
-  Function ScanBuffer(Value: UInt32): Integer;
-  var
-    ii: Integer;
-  begin
-    For ii := 0 to 31 do
-      If (Value shr ii) and 1 = 0 then
-        begin
-          Result := ii;
-          Exit;
-        end;
-    raise Exception.Create('TBitVectorStatic32.FirstClean.ScanBuffer: Operation not allowed.');
-  end;
-
 begin
 Result := -1;
 If fCount > 0 then
   For i := 0 to Pred(fCount shr 5) do
     begin
     {$IFDEF ENDIAN_BIG}
-      Buffer := SwapEndian({%H-}PUInt32({%H-}PtrUInt(fMemory) + PtrUInt(i * SizeOf(UInt32)))^);
+      Buffer := EndianSwap(PUInt32(GetBytePtrByteIdx(i * SizeOf(UInt32)))^);
     {$ELSE}
-      Buffer := {%H-}PUInt32({%H-}PtrUInt(fMemory) + PtrUInt(i * SizeOf(UInt32)))^;
+      Buffer := PUInt32(GetBytePtrByteIdx(i * SizeOf(UInt32)))^;
     {$ENDIF}
       If Buffer <> $FFFFFFFF then
         begin
-          Result := (i * 32) + ScanBuffer(Buffer);
+          Result := (i * 32) + BSF(not Buffer);
           Break;
         end;
     end;
@@ -1368,33 +1193,19 @@ Function TBitVectorStatic32.LastSet: Integer;
 var
   i:      Integer;
   Buffer: UInt32;
-
-  Function ScanBuffer(Value: UInt32): Integer;
-  var
-    ii: Integer;
-  begin
-    For ii := 31 downto 0 do
-      If (Value shr ii) and 1 <> 0 then
-        begin
-          Result := ii;
-          Exit;
-        end;
-    raise Exception.Create('TBitVectorStatic32.LastSet.ScanBuffer: Operation not allowed.');
-  end;
-
 begin
 Result := -1;
 If fCount > 0 then
   For i := Pred(fCount shr 5) downto 0 do
     begin
     {$IFDEF ENDIAN_BIG}
-      Buffer := SwapEndian({%H-}PUInt32({%H-}PtrUInt(fMemory) + PtrUInt(i * SizeOf(UInt32)))^);
+      Buffer := EndianSwap(PUInt32(GetBytePtrByteIdx(i * SizeOf(UInt32)))^);
     {$ELSE}
-      Buffer := {%H-}PUInt32({%H-}PtrUInt(fMemory) + PtrUInt(i * SizeOf(UInt32)))^;
+      Buffer := PUInt32(GetBytePtrByteIdx(i * SizeOf(UInt32)))^;
     {$ENDIF}
       If Buffer <> 0 then
         begin
-          Result := (i * 32) + ScanBuffer(Buffer);
+          Result := (i * 32) + BSR(Buffer);
           Break;
         end;
     end;
@@ -1406,33 +1217,19 @@ Function TBitVectorStatic32.LastClean: Integer;
 var
   i:      Integer;
   Buffer: UInt32;
-
-  Function ScanBuffer(Value: UInt32): Integer;
-  var
-    ii: Integer;
-  begin
-    For ii := 31 downto 0 do
-      If (Value shr ii) and 1 = 0 then
-        begin
-          Result := ii;
-          Exit;
-        end;
-    raise Exception.Create('TBitVectorStatic32.LastClean.ScanBuffer: Operation not allowed.');
-  end;
-
 begin
 Result := -1;
 If fCount > 0 then
   For i := Pred(fCount shr 5) downto 0 do
     begin
     {$IFDEF ENDIAN_BIG}
-      Buffer := SwapEndian({%H-}PUInt32({%H-}PtrUInt(fMemory) + PtrUInt(i * SizeOf(UInt32)))^);
+      Buffer := EndianSwap(PUInt32(GetBytePtrByteIdx(i * SizeOf(UInt32)))^);
     {$ELSE}
-      Buffer := {%H-}PUInt32({%H-}PtrUInt(fMemory) + PtrUInt(i * SizeOf(UInt32)))^;
+      Buffer := PUInt32(GetBytePtrByteIdx(i * SizeOf(UInt32)))^;
     {$ENDIF}
       If Buffer <> $FFFFFFFF then
         begin
-          Result := (i * 32) + ScanBuffer(Buffer);
+          Result := (i * 32) + BSR(not Buffer);
           Break;
         end;
     end;

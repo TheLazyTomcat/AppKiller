@@ -11,14 +11,28 @@
 
   Common material and classes
 
-  ©František Milt 2016-06-02
+  ©František Milt 2017-07-18
 
-  Version 0.9.1
+  Version 0.9.2
+
+  Dependencies:
+    AuxTypes       - github.com/ncs-sniper/Lib.AuxTypes
+    BitOps         - github.com/ncs-sniper/Lib.BitOps
+    MulticastEvent - github.com/ncs-sniper/Lib.MulticastEvent
+    WndAlloc       - github.com/ncs-sniper/Lib.WndAlloc
+    WinRawInput    - github.com/ncs-sniper/Lib.WinRawInput
+    BitVector      - github.com/ncs-sniper/Lib.BitVector
+    UtilityWindow  - github.com/ncs-sniper/Lib.UtilityWindow
+    DefRegistry    - github.com/ncs-sniper/Lib.DefRegistry
+    StrRect        - github.com/ncs-sniper/Lib.StrRect
+  * SimpleCPUID    - github.com/ncs-sniper/Lib.SimpleCPUID
+
+  SimpleCPUID might not be needed, see BitOps library for details.
 
 ===============================================================================}
 unit RawInputCommon;
 
-{$Include 'RawInput_defs.inc'}
+{$INCLUDE 'RawInput_defs.inc'}
 
 interface
 

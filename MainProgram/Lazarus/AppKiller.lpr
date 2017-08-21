@@ -7,7 +7,7 @@
 -------------------------------------------------------------------------------}
 program AppKiller;
 
-{$mode objfpc}{$H+}
+{$INCLUDE '..\Source\APK_Defs.inc'}
 
 uses
   Interfaces,

@@ -51,9 +51,8 @@ type
 implementation
 
 uses
-  Windows, Messages, SysUtils, {$IFDEF FPC}jwaPSApi{$ELSE}PSApi{$ENDIF}, 
-  APK_ProcEnum
-  {$IF Defined(FPC) and not Defined(Unicode)}, LazUTF8{$IFEND};
+  Windows, Messages, SysUtils,{$IFDEF FPC} jwaPSApi{$ELSE} PSApi{$ENDIF}, 
+  APK_ProcEnum, StrRect;
 
 {==============================================================================}
 {------------------------------------------------------------------------------}
@@ -134,11 +133,7 @@ SetLength(ProcessName,MAX_PATH);
 If GetModuleFileNameEx(ProcessHandle,0,PChar(ProcessName),Length(ProcessName)) > 0 then
   begin
     SetLength(ProcessName,StrLen(PChar(ProcessName)));
-  {$IF Defined(FPC) and not Defined(Unicode)}
-    ProcessName := ExtractFileName(WinCPToUTF8(ProcessName));
-  {$ELSE}
-    ProcessName := ExtractFileName(ProcessName);
-  {$IFEND}
+    ProcessName := ExtractFileName(WinToStr(ProcessName));
     Result := ProcessName <> '';
   end;
 end;

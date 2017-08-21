@@ -110,8 +110,8 @@ IncludeVerInfo=1
 AutoIncBuild=1
 MajorVer=3
 MinorVer=0
-Release=0
-Build=54
+Release=1
+Build=58
 Debug=0
 PreRelease=0
 Special=0
@@ -122,13 +122,13 @@ CodePage=1250
 [Version Info Keys]
 CompanyName=František Milt
 FileDescription=Application Killer
-FileVersion=3.0.0.54
+FileVersion=3.0.1.58
 InternalName=AppKiller
-LegalCopyright=© 2010 - 2016 František Milt
+LegalCopyright=© 2010 - 2017 František Milt
 LegalTrademarks=AppKiller
 OriginalFilename=AppKiller.exe
 ProductName=AppKiller 3
-ProductVersion=3.0.0
+ProductVersion=3.0.1
 Comments=Main program of AppKiller 3.x
 [HistoryLists\hlConditionals]
 Count=1

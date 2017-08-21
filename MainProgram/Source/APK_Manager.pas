@@ -56,11 +56,7 @@ type
 implementation
 
 uses
-  SysUtils,
-  APK_Strings
-{$IF Defined(FPC) and not Defined(Unicode) and (FPC_FULLVERSION < 20701)}
-  , LazUTF8
-{$IFEND};
+  SysUtils, StrRect, APK_Strings;
 
 {==============================================================================}
 {------------------------------------------------------------------------------}
@@ -100,11 +96,7 @@ fSettings := TAPKSettings.Create;
 fTrayIcon := TAPKTrayIcon.Create;
 fLog := TSimpleLog.Create;
 fLog.InternalLog := False;
-{$IF Defined(FPC) and not Defined(Unicode) and (FPC_FULLVERSION < 20701)}
-fLog.StreamFileName := ExtractFilePath(SysToUTF8(ParamStr(0))) + 'AppKiller.log';
-{$ELSE}
-fLog.StreamFileName := ExtractFilePath(ParamStr(0)) + 'AppKiller.log';
-{$IFEND}
+fLog.StreamFileName := ExtractFilePath(RTLToStr(ParamStr(0))) + 'AppKiller.log';
 fLog.StreamAppend := True;
 fLog.StreamToFile := True;
 fKeyboard := TAPKKeyboard.Create;
@@ -141,7 +133,7 @@ end;
 procedure TAPKManager.Finalize;
 begin
 fSettings.SetShortcut(fKeyboard.Shortcut);
-fSettings.Save;
+fSettings.Save(True);
 end;
 
 //------------------------------------------------------------------------------
