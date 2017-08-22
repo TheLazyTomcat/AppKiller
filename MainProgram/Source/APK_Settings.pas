@@ -54,9 +54,8 @@ type
     fSettings:  TAPKSettingsStruct;
     Function GetSettingsPtr: PAPKSettingsStruct;
   public
-    class Function RunAtSystemStartIsActive: Boolean; virtual;
     class Function RunAtSystemStartDelete: Boolean; virtual;
-    class Function RunAtSystemStartActivate: Boolean; virtual;
+    class Function RunAtSystemStartAdd: Boolean; virtual;
     constructor Create;
     constructor CreateCopy(Source: TAPKSettings);
     procedure LoadDefaultSettings; virtual;
@@ -74,41 +73,8 @@ implementation
 
 uses
   Windows, SysUtils, IniFiles, ActiveX, DateUtils,
-  RawInputKeyboard, StrRect, WinTaskScheduler;
-
-{==============================================================================}
-{   Auxiliary and external functions                                           }
-{==============================================================================}
-
-type
-{$MINENUMSIZE 4}
-  EXTENDED_NAME_FORMAT = (
-    NameUnknown          = 0,
-    NameFullyQualifiedDN = 1,
-    NameSamCompatible    = 2,
-    NameDisplay          = 3,
-    NameUniqueId         = 6,
-    NameCanonical        = 7,
-    NameUserPrincipal    = 8,
-    NameCanonicalEx      = 9,
-    NameServicePrincipal = 10,
-    NameDnsDomain        = 12);
-
-Function GetUserNameExW(NameFormat: EXTENDED_NAME_FORMAT; lpNameBuffer: PWideChar; lpnSize: PULONG): ByteBool; stdcall; external 'secur32.dll';
-Function GetUserNameExA(NameFormat: EXTENDED_NAME_FORMAT; lpNameBuffer: PAnsiChar; lpnSize: PULONG): ByteBool; stdcall; external 'secur32.dll';
-Function GetUserNameEx(NameFormat: EXTENDED_NAME_FORMAT; lpNameBuffer: PChar; lpnSize: PULONG): ByteBool; stdcall; external 'secur32.dll' name {$IFDEF Unicode} 'GetUserNameExW'{$ELSE} 'GetUserNameExA'{$ENDIF};
-
-
-Function GetAccountName: WideString;
-var
-  AccountNameLen: ULONG;
-begin
-AccountNameLen := 0;
-GetUserNameExW(NameSamCompatible,nil,@AccountNameLen);
-SetLength(Result,AccountNameLen);
-If not GetUserNameExW(NameSamCompatible,PWideChar(Result),@AccountNameLen) then
-  raise Exception.CreateFmt('Cannot obtain account name (0x%.8x).',[GetLastError]);
-end;
+  RawInputKeyboard, StrRect, WinTaskScheduler,
+  APK_Strings, APK_System;
 
 {==============================================================================}
 {------------------------------------------------------------------------------}
@@ -145,34 +111,6 @@ end;
 {   TAPKSettings - public methods                                              }
 {------------------------------------------------------------------------------}
 
-const
-  TaskName    = WideString('AppKiller 3 autorun');
-  TaskComment = WideString('Automatic starting of AppKiller at system startup (user logon).');
-
-//------------------------------------------------------------------------------
-
-class Function TAPKSettings.RunAtSystemStartIsActive: Boolean;
-var
-  TaskScheduler:  ITaskScheduler;
-  Task:           ITask;
-begin
-Result := False;
-If Succeeded(CoInitialize(nil)) then
-try
-  If Succeeded(CoCreateInstance(CLSID_CTaskScheduler,nil,CLSCTX_INPROC_SERVER,IID_ITaskScheduler,TaskScheduler)) then
-  try
-    Result := Succeeded(TaskScheduler.Activate(LPCWSTR(TaskName),@IID_ITask,@Task));
-    Task := nil;  // Task.Release
-  finally
-    TaskScheduler := nil; // TaskScheduler.Release
-  end;
-finally
-  CoUninitialize;
-end;
-end;
-
-//------------------------------------------------------------------------------
-
 class Function TAPKSettings.RunAtSystemStartDelete: Boolean;
 var
   TaskScheduler:  ITaskScheduler;
@@ -182,7 +120,7 @@ If Succeeded(CoInitialize(nil)) then
 try
   If Succeeded(CoCreateInstance(CLSID_CTaskScheduler,nil,CLSCTX_INPROC_SERVER,IID_ITaskScheduler,TaskScheduler)) then
   try
-    Result := Succeeded(TaskScheduler.Delete(LPCWSTR(TaskName)));
+    Result := Succeeded(TaskScheduler.Delete(LPCWSTR(APKSTR_ST_TaskName)));
   finally
     TaskScheduler := nil; // TaskScheduler.Release
   end;
@@ -193,7 +131,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-class Function TAPKSettings.RunAtSystemStartActivate: Boolean;
+class Function TAPKSettings.RunAtSystemStartAdd: Boolean;
 var
   TaskScheduler:  ITaskScheduler;
   Task:           ITask;
@@ -208,11 +146,12 @@ If Succeeded(CoInitialize(nil)) then
 try
   If Succeeded(CoCreateInstance(CLSID_CTaskScheduler,nil,CLSCTX_INPROC_SERVER,IID_ITaskScheduler,TaskScheduler)) then
   try
-    If Succeeded(TaskScheduler.NewWorkItem(LPCWSTR(TaskName),@CLSID_Ctask,@IID_ITask,@Task)) then
+    TaskScheduler.Delete(APKSTR_ST_TaskName); // if the task already exists, remove it
+    If Succeeded(TaskScheduler.NewWorkItem(LPCWSTR(APKSTR_ST_TaskName),@CLSID_Ctask,@IID_ITask,@Task)) then
       try
         Task.SetApplicationName(LPCWSTR(StrToWide(RTLToStr(ParamStr(0)))));
         Task.SetWorkingDirectory(LPCWSTR(StrToWide(ExtractFilePath(RTLToStr(ParamStr(0))))));
-        Task.SetComment(LPCWSTR(TaskComment));
+        Task.SetComment(LPCWSTR(APKSTR_ST_TaskComment));
         Task.SetFlags(TASK_FLAG_RUN_ONLY_IF_LOGGED_ON);
         Task.SetAccountInformation(LPCWSTR(GetAccountName),nil);
         If Succeeded(Task.CreateTrigger(@TriggerID,@Trigger)) then
@@ -224,13 +163,13 @@ try
           TriggerData.wBeginMonth := MonthOf(CurrDate);
           TriggerData.wBeginDay := DayOf(CurrDate);
           TriggerData.TriggerType := TASK_EVENT_TRIGGER_AT_LOGON;
-          Trigger.SetTrigger(@TriggerData);
-          If Succeeded(Task.QueryInterface(IID_IPersistFile,PersistFile)) then
-          try
-            Result := Succeeded(PersistFile.Save(nil,True));
-          finally
-            PersistFile := nil; // PersistFile.Release
-          end;
+          If Succeeded(Trigger.SetTrigger(@TriggerData)) then
+            If Succeeded(Task.QueryInterface(IID_IPersistFile,PersistFile)) then
+            try
+              Result := Succeeded(PersistFile.Save(nil,True));
+            finally
+              PersistFile := nil; // PersistFile.Release
+            end;
         finally
           Trigger := nil; // Trigger.Release
         end;
@@ -367,17 +306,16 @@ end;
 
 procedure TAPKSettings.Save(Final: Boolean);
 begin
-SaveToIni(ExtractFilePath(RTLToStr(ParamStr(0))) + 'AppKiller.ini');
 If Final then
   begin
     If fSettings.GeneralSettings.RunAtSystemStart then
       begin
-        If RunAtSystemStartIsActive then
-          RunAtSystemStartdelete;
-        RunAtSystemStartActivate;
+        If not RunAtSystemStartAdd then
+          fSettings.GeneralSettings.RunAtSystemStart := False;
       end
     else RunAtSystemStartDelete;
   end;
+SaveToIni(ExtractFilePath(RTLToStr(ParamStr(0))) + 'AppKiller.ini');
 end;
 
 //------------------------------------------------------------------------------

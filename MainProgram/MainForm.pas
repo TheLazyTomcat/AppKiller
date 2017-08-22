@@ -349,7 +349,7 @@ procedure TfMainForm.pmniTermList_AddClick(Sender: TObject);
 var
   i:  Integer;
 begin
-If fAddProcForm.ShowAsPrompt then
+If fAddProcForm.ShowAsPrompt('Add process to "for termination" list') then
   For i := 0 to Pred(fAddProcForm.SelectedProcesses.Count) do
     If (fAddProcForm.SelectedProcesses[i] <> '') and (clbProcTerm.Items.IndexOf(fAddProcForm.SelectedProcesses[i]) < 0) then
       clbProcTerm.Checked[clbProcTerm.Items.Add(fAddProcForm.SelectedProcesses[i])] := True;
@@ -449,7 +449,7 @@ procedure TfMainForm.pmniNoTermList_AddClick(Sender: TObject);
 var
   i:  Integer;
 begin
-If fAddProcForm.ShowAsPrompt then
+If fAddProcForm.ShowAsPrompt('Add process to "never terminate" list') then
   For i := 0 to Pred(fAddProcForm.SelectedProcesses.Count) do
     If (fAddProcForm.SelectedProcesses[i] <> '') and (clbProcNoTerm.Items.IndexOf(fAddProcForm.SelectedProcesses[i]) < 0) then
       clbProcNoTerm.Checked[clbProcNoTerm.Items.Add(fAddProcForm.SelectedProcesses[i])] := True;
