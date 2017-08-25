@@ -62,7 +62,7 @@ type
     procedure ActiveControlChange(Sender: TObject);
     procedure ShowColumnArrow(Column: Integer; ArrowState: TArrowState);
   public
-    Function ShowAsPrompt: Boolean;
+    Function ShowAsPrompt(const WindowCaption: String): Boolean;
     property SelectedProcesses: TStringList read fSelectedProcesses;
   end;
 
@@ -166,10 +166,11 @@ end;
 
 //------------------------------------------------------------------------------
 
-Function TfAddProcForm.ShowAsPrompt: Boolean;
+Function TfAddProcForm.ShowAsPrompt(const WindowCaption: String): Boolean;
 var
   i:  Integer;
 begin
+Caption := WindowCaption;
 leProcessName.Text := '';
 For i := 0 to Pred(lvRunningProcesses.Items.Count) do
    lvRunningProcesses.Items[i].Selected := False;

@@ -27,6 +27,10 @@ const
   APKSTR_TI_HintText    = APKSTR_CM_ProgramTitle + sLineBreak + 'Press [%s] to start the ternimation';
   APKSTR_TI_MessageName = 'AppKiller_TrayIcon_B306D82D-6F23-443D-99C1-9116C7FA5412';
 
+  // Settings
+  APKSTR_ST_TaskName    = WideString('AppKiller 3 Autorun');
+  APKSTR_ST_TaskComment = WideString('Automatic start of AppKiller at user logon.');
+
   // Tray icon popup menu items
   APKSTR_TI_MI_Splitter = '-';
   APKSTR_TI_MI_Restore  = 'Show settings window...';
