@@ -51,11 +51,14 @@ type
 
   TAPKSettings = class(TObject)
   private
-    fSettings:  TAPKSettingsStruct;
+    fSettings:      TAPKSettingsStruct;
+    fWinVistaPlus:  Boolean;
     Function GetSettingsPtr: PAPKSettingsStruct;
   public
-    class Function RunAtSystemStartDelete: Boolean; virtual;
-    class Function RunAtSystemStartAdd: Boolean; virtual;
+    class Function RunAtSystemStartDelete_TS1: Boolean; virtual;
+    class Function RunAtSystemStartAdd_TS1: Boolean; virtual;
+    class Function RunAtSystemStartDelete_TS2: Boolean; virtual;
+    class Function RunAtSystemStartAdd_TS2: Boolean; virtual;
     constructor Create;
     constructor CreateCopy(Source: TAPKSettings);
     procedure LoadDefaultSettings; virtual;
@@ -63,6 +66,8 @@ type
     procedure LoadFromIni(const FileName: String); virtual;
     procedure Save(Final: Boolean); virtual;
     procedure Load; virtual;
+    Function RunAtSystemStartDelete: Boolean; virtual;
+    Function RunAtSystemStartAdd: Boolean; virtual;
     Function GetShortcut: TAPKShortcut; virtual;
     procedure SetShortcut(Shortcut: TAPKShortcut); virtual;
     property Settings: TAPKSettingsStruct read fSettings;
@@ -72,7 +77,7 @@ type
 implementation
 
 uses
-  Windows, SysUtils, IniFiles, ActiveX, DateUtils,
+  Windows, SysUtils, IniFiles, ActiveX, Variants, DateUtils,
   RawInputKeyboard, StrRect, WinTaskScheduler,
   APK_Strings, APK_System;
 
@@ -111,7 +116,7 @@ end;
 {   TAPKSettings - public methods                                              }
 {------------------------------------------------------------------------------}
 
-class Function TAPKSettings.RunAtSystemStartDelete: Boolean;
+class Function TAPKSettings.RunAtSystemStartDelete_TS1: Boolean;
 var
   TaskScheduler:  ITaskScheduler;
 begin
@@ -131,7 +136,7 @@ end;
 
 //------------------------------------------------------------------------------
 
-class Function TAPKSettings.RunAtSystemStartAdd: Boolean;
+class Function TAPKSettings.RunAtSystemStartAdd_TS1: Boolean;
 var
   TaskScheduler:  ITaskScheduler;
   Task:           ITask;
@@ -154,6 +159,7 @@ try
         Task.SetComment(LPCWSTR(APKSTR_ST_TaskComment));
         Task.SetFlags(TASK_FLAG_RUN_ONLY_IF_LOGGED_ON);
         Task.SetAccountInformation(LPCWSTR(GetAccountName),nil);
+        Task.SetMaxRunTime(INFINITE);
         If Succeeded(Task.CreateTrigger(@TriggerID,@Trigger)) then
         try
           FillChar({%H-}TriggerData,SizeOf(TriggerData),0);
@@ -168,16 +174,16 @@ try
             try
               Result := Succeeded(PersistFile.Save(nil,True));
             finally
-              PersistFile := nil; // PersistFile.Release
+              PersistFile := nil;
             end;
         finally
-          Trigger := nil; // Trigger.Release
+          Trigger := nil;
         end;
       finally
-        Task := nil; //Task.Release
+        Task := nil;
       end;
   finally
-    TaskScheduler := nil; // TaskScheduler.Release
+    TaskScheduler := nil;
   end;
 finally
   CoUninitialize;
@@ -186,9 +192,156 @@ end;
 
 //------------------------------------------------------------------------------
 
+class Function TAPKSettings.RunAtSystemStartDelete_TS2: Boolean;
+var
+  TaskService:  ITaskService;
+  RootFolder:   ITaskFolder;
+begin
+Result := False;
+If Succeeded(CoInitialize(nil)) then
+try
+  If Succeeded(CoInitializeSecurity(nil,-1,nil,nil,RPC_C_AUTHN_LEVEL_PKT_PRIVACY,RPC_C_IMP_LEVEL_IMPERSONATE,nil,0,nil)) then
+    If Succeeded(CoCreateInstance(CLSID_TaskScheduler,nil,CLSCTX_INPROC_SERVER,IID_ITaskService,TaskService)) then
+    try
+      If Succeeded(TaskService.Connect('','','','')) then
+        If Succeeded(TaskService.GetFolder(BSTR(WideString('\')),@RootFolder)) then
+        try
+          Result := Succeeded(RootFolder.DeleteTask(BSTR(APKSTR_ST_TaskName),0));
+        finally
+          RootFolder := nil;
+        end;
+    finally
+      TaskService := nil;
+    end;
+finally
+  CoUninitialize;
+end;
+end;
+
+//------------------------------------------------------------------------------
+
+class Function TAPKSettings.RunAtSystemStartAdd_TS2: Boolean;
+var
+  TaskService:    ITaskService;
+  RootFolder:     ITaskFolder;
+  Task:           ITaskDefinition;
+  RegInfo:        IRegistrationInfo;
+  Settings:       ITaskSettings;
+  Triggers:       ITriggerCollection;
+  Trigger:        ITrigger;
+  LogonTrigger:   ILogonTrigger;
+  Actions:        IActionCollection;
+  Action:         IAction;
+  ExecAction:     IExecAction;
+  Principal:      IPrincipal;
+  RegisteredTask: IRegisteredTask;
+begin
+Result := False;
+If Succeeded(CoInitialize(nil)) then
+try
+  If Succeeded(CoInitializeSecurity(nil,-1,nil,nil,RPC_C_AUTHN_LEVEL_PKT_PRIVACY,RPC_C_IMP_LEVEL_IMPERSONATE,nil,0,nil)) then
+    If Succeeded(CoCreateInstance(CLSID_TaskScheduler,nil,CLSCTX_INPROC_SERVER,IID_ITaskService,TaskService)) then
+    try
+      If Succeeded(TaskService.Connect('','','','')) then
+        If Succeeded(TaskService.GetFolder(BSTR(StrToWide('\')),@RootFolder)) then
+        try
+          RootFolder.DeleteTask(BSTR(APKSTR_ST_TaskName),0);
+          If Succeeded(TaskService.NewTask(0,@Task)) then
+          try
+            // fill registration information
+            RegInfo := Task.RegistrationInfo;
+            try
+              RegInfo.Author := BSTR(StrToWide('AppKiller 3'));
+              RegInfo.Description := BSTR(APKSTR_ST_TaskComment);
+              RegInfo.Date := BSTR(StrToWide(FormatDateTime('YYYY-MM-DD"T"HH:NN:SS',Now)));
+            finally
+              RegInfo := nil;
+            end;
+            // fill task settings
+            Settings := Task.Settings;
+            try
+              Settings.AllowDemandStart := True;
+              Settings.StopIfGoingOnBatteries := False;
+              Settings.DisallowStartIfOnBatteries := False;
+              Settings.AllowHardTerminate := False;
+              Settings.ExecutionTimeLimit := BSTR(StrToWide('PT0S'));
+              Settings.Enabled := True;
+            finally
+              Settings := nil;
+            end;
+            // create and set up trigger
+            Triggers := Task.Triggers;
+            try
+              If Succeeded(Triggers.Create(TASK_TRIGGER_LOGON,@Trigger)) then
+              try
+                If Succeeded(Trigger.QueryInterface(IID_ILogonTrigger,LogonTrigger)) then
+                try
+                  LogonTrigger.UserId := BSTR(GetAccountName);
+                  LogonTrigger.Enabled := True;
+                finally
+                  LogonTrigger := nil;
+                end;
+              finally
+                Trigger := nil;
+              end;
+            finally
+              Triggers := nil;  // release
+            end;
+            // create and set up action
+            Actions := Task.Actions;
+            try
+              If Succeeded(Actions.Create(TASK_ACTION_EXEC,@Action)) then
+              try
+                If Succeeded(Action.QueryInterface(IID_IExecAction,ExecAction)) then
+                try
+                  ExecAction.Path := BSTR(StrToWide(RTLToStr(ParamStr(0))));
+                  ExecAction.WorkingDirectory := BSTR(StrToWide(ExtractFilePath(RTLToStr(ParamStr(0)))));
+                finally
+                  ExecAction := nil;
+                end;
+              finally
+                Action := nil;
+              end;
+            finally
+              Actions := nil;
+            end;
+            // set up principal
+            Principal := Task.Principal;
+            try
+              Principal.RunLevel := TASK_RUNLEVEL_HIGHEST;
+              Principal.LogonType := TASK_LOGON_GROUP;
+            finally
+              Principal := nil;
+            end;
+            // register the task
+            If Succeeded(RootFolder.RegisterTaskDefinition(
+              BSTR(APKSTR_ST_TaskName),Task,LONG(TASK_CREATE_OR_UPDATE),
+              'Builtin\Administrators',null,TASK_LOGON_GROUP,'',@RegisteredTask)) then
+            try
+              Result := True;
+            finally
+              RegisteredTask := nil;
+            end;
+          finally
+            Task := nil;
+          end;
+        finally
+          RootFolder := nil;
+        end;
+    finally
+      TaskService := nil;
+    end;
+finally
+  CoUninitialize;
+end;
+end;
+
+//==============================================================================
+
 constructor TAPKSettings.Create;
 begin
 inherited Create;
+fWinVistaPlus := Win32MajorVersion >= 6;
 LoadDefaultSettings;
 end;
 
@@ -350,6 +503,26 @@ If kssAlt in Shortcut.ShiftStates then
   fSettings.GeneralSettings.Shortcut := fSettings.GeneralSettings.Shortcut or 2;
 If kssShift in Shortcut.ShiftStates then
   fSettings.GeneralSettings.Shortcut := fSettings.GeneralSettings.Shortcut or 4;
+end;
+
+//------------------------------------------------------------------------------
+
+Function TAPKSettings.RunAtSystemStartDelete: Boolean;
+begin
+If fWinVistaPlus then
+  Result := RunAtSystemStartDelete_TS2
+else
+  Result := RunAtSystemStartDelete_TS1;
+end;
+
+//------------------------------------------------------------------------------
+
+Function TAPKSettings.RunAtSystemStartAdd: Boolean;
+begin
+If fWinVistaPlus then
+  Result := RunAtSystemStartAdd_TS2
+else
+  Result := RunAtSystemStartAdd_TS1;
 end;
 
 end.

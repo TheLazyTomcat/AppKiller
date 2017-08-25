@@ -20,10 +20,12 @@ Function GetAccountName: WideString;
 
 //------------------------------------------------------------------------------
 
-{$IF not Declared(PROCESS_QUERY_LIMITED_INFORMATION)}
 const
+{$IF not Declared(PROCESS_QUERY_LIMITED_INFORMATION)}
   PROCESS_QUERY_LIMITED_INFORMATION = $00001000;
 {$IFEND}
+  RPC_C_AUTHN_LEVEL_PKT_PRIVACY = 6;
+  RPC_C_IMP_LEVEL_IMPERSONATE   = 3;
 
 {$IF not Declared(PHICON)}
 type
@@ -62,6 +64,14 @@ Function GetUserNameExA(NameFormat: EXTENDED_NAME_FORMAT; lpNameBuffer: PAnsiCha
 Function GetUserNameEx(NameFormat: EXTENDED_NAME_FORMAT; lpNameBuffer: PChar; lpnSize: PULONG): ByteBool; stdcall; external 'secur32.dll'
   name {$IFDEF Unicode} 'GetUserNameExW'{$ELSE} 'GetUserNameExA'{$ENDIF};
 {$IFEND}
+
+{$IFDEF 64bit}
+Function GetWindowLongPtr(hWnd: HWND; nIndex: Integer): Pointer; stdcall; external user32;
+Function SetWindowLongPtr(hWnd: HWND; nIndex: Integer; dwNewLong: Pointer): Pointer; stdcall; external user32;
+{$ELSE}
+Function GetWindowLongPtr(hWnd: HWND; nIndex: Integer): Pointer;
+Function SetWindowLongPtr(hWnd: HWND; nIndex: Integer; dwNewLong: Pointer): Pointer;
+{$ENDIF}
 
 implementation
 
@@ -114,5 +124,21 @@ SetLength(Result,AccountNameLen);
 If not GetUserNameExW(NameSamCompatible,PWideChar(Result),@AccountNameLen) then
   raise Exception.CreateFmt('Cannot obtain account name (0x%.8x).',[GetLastError]);
 end;
+
+//==============================================================================
+
+{$IFNDEF 64bit}
+Function GetWindowLongPtr(hWnd: HWND; nIndex: Integer): Pointer;
+begin
+Result := {%H-}Pointer(GetWindowLong(hWnd,nIndex));
+end;
+
+//------------------------------------------------------------------------------
+
+Function SetWindowLongPtr(hWnd: HWND; nIndex: Integer; dwNewLong: Pointer): Pointer;
+begin
+Result := {%H-}Pointer(SetWindowLong(hWnd,nIndex,{%H-}Integer(dwNewLong)));
+end;
+{$ENDIF}
 
 end.

@@ -12,8 +12,8 @@ unit MainForm;
 interface
 
 uses
-  Windows, SysUtils, Variants, Classes, Graphics, Controls, Forms, Dialogs,
-  StdCtrls, CheckLst, Spin, ExtCtrls, ComCtrls, Menus,
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, StdCtrls, CheckLst, Spin, ExtCtrls, ComCtrls, Menus,
   APK_Manager;
 
 type
@@ -90,8 +90,8 @@ type
     procedure pmniNoTermList_MoveUpClick(Sender: TObject);
     procedure pmniNoTermList_MoveDownClick(Sender: TObject);
   private
-    AppKillerManager:  TAPKManager;
-    ForceClose:        Boolean;
+    AppKillerManager: TAPKManager;
+    ForceClose:       Boolean;
   protected
     procedure OnTrayMenuItem(Sender: TObject; aAction: Integer);
     procedure OnSettingsUpdateRequired(Sender: TObject);
@@ -100,7 +100,7 @@ type
     procedure ShortcutChanged;
     procedure UpdateListsStyle;
   public
-    { Public declarations }
+    procedure SessionEndProcess;
   end;
 
 var
@@ -117,6 +117,18 @@ implementation
 uses
   APK_System, APK_Strings, APK_TrayIcon, APK_Keyboard, APK_Settings,
   AddProcForm, ShortcutForm;
+
+var
+  WindowFunc: Pointer;
+
+Function WndCallback(Window: HWND; uMsg: UINT; wParam: WParam; lParam: LParam): LRESULT; stdcall;
+begin
+If uMsg = WM_QUERYENDSESSION then
+  fMainForm.SessionEndProcess;
+Result := CallWindowProc(WindowFunc,Window,uMsg,WParam,LParam);
+end;
+
+//==============================================================================
 
 procedure TfMainForm.OnTrayMenuItem(Sender: TObject; aAction: Integer);
 begin
@@ -230,10 +242,19 @@ else
 {$ENDIF}
 end;
 
+//------------------------------------------------------------------------------
+
+procedure TfMainForm.SessionEndProcess;
+begin
+FormToSettings;
+AppKillerManager.Finalize;
+end;
+
 //==============================================================================
 
 procedure TfMainForm.FormCreate(Sender: TObject);
 begin
+WindowFunc := APK_System.SetWindowLongPtr(Handle,GWL_WNDPROC,@WndCallback);
 ForceClose := False;
 // Get debug privilege if available
 SetPrivilege('SeDebugPrivilege',True);
@@ -273,12 +294,12 @@ end;
 
 procedure TfMainForm.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 begin
-If Visible and not ForceClose then
+If not ForceClose then
   begin
     FormToSettings;
     AppKillerManager.Settings.Save(False);
     CanClose := False;
-    Hide;
+    If Visible then Hide;
   end
 else CanClose := True;
 end;
@@ -520,6 +541,5 @@ If (clbProcNoTerm.ItemIndex >= 0) and (clbProcNoTerm.ItemIndex < Pred(clbProcNoT
   {$ENDIF}
   end;
 end;
- 
 
 end.
