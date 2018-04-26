@@ -81,6 +81,10 @@ uses
   RawInputKeyboard, StrRect, WinTaskScheduler,
   APK_Strings, APK_System;
 
+{$IFDEF FPC_DisableWarns}
+  {$WARN 5057 OFF} // Local variable "$1" does not seem to be initialized
+{$ENDIF}
+
 {==============================================================================}
 {------------------------------------------------------------------------------}
 {                                 TAPKSettings                                 }
@@ -162,7 +166,7 @@ try
         Task.SetMaxRunTime(INFINITE);
         If Succeeded(Task.CreateTrigger(@TriggerID,@Trigger)) then
         try
-          FillChar({%H-}TriggerData,SizeOf(TriggerData),0);
+          FillChar(TriggerData,SizeOf(TriggerData),0);
           TriggerData.cbTriggerSize := SizeOf(TriggerData);
           CurrDate := Now;
           TriggerData.wBeginYear := YearOf(CurrDate);

@@ -12,7 +12,8 @@ unit APK_System;
 interface
 
 uses
-  Windows, ShellAPI;
+  Windows, ShellAPI,
+  AuxTypes;
 
 Function SetPrivilege(const PrivilegeName: String; Enable: Boolean): Boolean;
 
@@ -73,10 +74,21 @@ Function GetWindowLongPtr(hWnd: HWND; nIndex: Integer): Pointer;
 Function SetWindowLongPtr(hWnd: HWND; nIndex: Integer; dwNewLong: Pointer): Pointer;
 {$ENDIF}
 
+Function SendMessageTimeoutA(hWnd: HWND; Msg: UINT; wParam: WPARAM; lParam: LPARAM; fuFlags: UINT; uTimeout: UINT; lpdwResult: PPtrUInt): LRESULT; stdcall; external user32;
+Function SendMessageTimeoutW(hWnd: HWND; Msg: UINT; wParam: WPARAM; lParam: LPARAM; fuFlags: UINT; uTimeout: UINT; lpdwResult: PPtrUInt): LRESULT; stdcall; external user32;
+Function SendMessageTimeout(hWnd: HWND; Msg: UINT; wParam: WPARAM; lParam: LPARAM; fuFlags: UINT; uTimeout: UINT; lpdwResult: PPtrUInt): LRESULT; stdcall; external user32
+  name {$IFDEF Unicode} 'SendMessageTimeoutW'{$ELSE} 'SendMessageTimeoutA'{$ENDIF};
+
+
 implementation
 
 uses
   SysUtils;
+
+{$IFDEF FPC_DisableWarns}
+  {$WARN 4055 OFF} // Conversion between ordinals and pointers is not portable
+  {$WARN 5057 OFF} // Local variable "$1" does not seem to be initialized
+{$ENDIF}
 
 type
   HANDLE = THandle;
@@ -98,9 +110,9 @@ var
   TokenPrivileges:  TTokenPrivileges;
 begin
 Result := False;
-If OpenProcessToken(GetCurrentProcess,TOKEN_QUERY or TOKEN_ADJUST_PRIVILEGES,{%H-}Token) then
+If OpenProcessToken(GetCurrentProcess,TOKEN_QUERY or TOKEN_ADJUST_PRIVILEGES,Token) then
 try
-  If LookupPrivilegeValue(nil,PChar(PrivilegeName),{%H-}TokenPrivileges.Privileges[0].Luid) then
+  If LookupPrivilegeValue(nil,PChar(PrivilegeName),TokenPrivileges.Privileges[0].Luid) then
     begin
       TokenPrivileges.PrivilegeCount := 1;
       TokenPrivileges.Privileges[0].Attributes := Ord(Enable) * SE_PRIVILEGE_ENABLED;
@@ -130,14 +142,14 @@ end;
 {$IFNDEF 64bit}
 Function GetWindowLongPtr(hWnd: HWND; nIndex: Integer): Pointer;
 begin
-Result := {%H-}Pointer(GetWindowLong(hWnd,nIndex));
+Result := Pointer(GetWindowLong(hWnd,nIndex));
 end;
 
 //------------------------------------------------------------------------------
 
 Function SetWindowLongPtr(hWnd: HWND; nIndex: Integer; dwNewLong: Pointer): Pointer;
 begin
-Result := {%H-}Pointer(SetWindowLong(hWnd,nIndex,{%H-}Integer(dwNewLong)));
+Result := Pointer(SetWindowLong(hWnd,nIndex,Integer(dwNewLong)));
 end;
 {$ENDIF}
 

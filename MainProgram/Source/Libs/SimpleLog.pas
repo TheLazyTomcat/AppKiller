@@ -36,6 +36,7 @@ unit SimpleLog;
   }
   {.$DEFINE BARE_FPC}
   {$MODE ObjFPC}{$H+}
+  {$DEFINE FPC_DisableWarns}
 {$ENDIF}
 
 {$IF Defined(FPC) and not Defined(Unicode) and not Defined(BARE_FPC) and (FPC_FULLVERSION < 20701)}
@@ -168,6 +169,13 @@ implementation
 uses
   Windows, StrUtils, StrRect {$IFDEF UTF8Wrappers}, LazFileUtils {$ENDIF};
 
+{$IFDEF FPC_DisableWarns}
+  {$WARN 5057 OFF} // Local variable "$1" does not seem to be initialized
+  {$IF Defined(FPC) and (FPC_FULLVERSION >= 30000)}
+    {$WARN 5092 OFF} // Variable "$1" of a managed type does not seem to be initialized
+  {$IFEND}
+{$ENDIF}
+
 Function _FileExists(const FileName: String): Boolean;
 begin
 {$IFDEF UTF8Wrappers}
@@ -208,10 +216,10 @@ begin
 SetLength(StrBuffer,F.BufPos);
 Move(F.Buffer,PAnsiChar(StrBuffer)^,F.BufPos * SizeOf(AnsiChar));
 Text := String(StrBuffer);
-If WriteConsoleW(F.Handle,PChar(Text),Length(Text),{%H-}CharsWritten,nil) then
+If WriteConsoleW(F.Handle,PChar(Text),Length(Text),CharsWritten,nil) then
 {$ELSE}
 begin
-If WriteConsoleA(F.Handle,F.BufPtr,F.BufPos,{%H-}CharsWritten,nil) then
+If WriteConsoleA(F.Handle,F.BufPtr,F.BufPos,CharsWritten,nil) then
 {$ENDIF}
   begin
     SetLength(StrBuffer,F.BufPos);
@@ -237,7 +245,7 @@ var
   Text:       String;
 begin
 SetLength(Text,F.BufSize);
-If ReadConsoleW(F.Handle,PChar(Text),Length(Text),{%H-}CharsRead,nil) then
+If ReadConsoleW(F.Handle,PChar(Text),Length(Text),CharsRead,nil) then
   begin
     SetLength(Text,CharsRead);
     StrBuffer := StrToAnsi(Text);
@@ -248,7 +256,7 @@ If ReadConsoleW(F.Handle,PChar(Text),Length(Text),{%H-}CharsRead,nil) then
   end
 {$ELSE}
 begin
-If ReadConsoleA(F.Handle,F.BufPtr,F.BufSize,{%H-}CharsRead,nil) then
+If ReadConsoleA(F.Handle,F.BufPtr,F.BufSize,CharsRead,nil) then
   begin
     SetLength(StrBuffer,CharsRead);
     Move(F.Buffer,PAnsiChar(StrBuffer)^,CharsRead * SizeOf(AnsiChar));
@@ -523,7 +531,7 @@ inherited Create;
 {$IF not Defined(FPC) and (CompilerVersion >= 18)} // Delphi 2006 (not sure about that)
 fFormatSettings := TFormatSettings.Create(LOCALE_USER_DEFAULT);
 {$ELSE}
-{%H-}GetLocaleFormatSettings(LOCALE_USER_DEFAULT,fFormatSettings);
+GetLocaleFormatSettings(LOCALE_USER_DEFAULT,fFormatSettings);
 {$IFEND}
 {$WARN SYMBOL_PLATFORM ON}
 fTimeFormat := def_TimeFormat;

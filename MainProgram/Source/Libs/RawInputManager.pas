@@ -95,7 +95,7 @@ type
     procedure InitializeObjects; virtual;
     procedure FinalizeObjects; virtual;
     procedure ProcessRawInput(RawInput: PRawInput); overload; virtual;
-    procedure ProcessRawInput(lParam: lParam; {%H-}wParam: wParam); overload; virtual;
+    procedure ProcessRawInput(lParam: lParam; wParam: wParam); overload; virtual;
     procedure ProcessRawInputDeviceChange(lParam: lParam; wParam: wParam); virtual;
     procedure UnknownDeviceIntercepted(Sender: TObject; DeviceHandle: THandle); virtual;
     procedure GetDeviceAdditionalInfo(const DeviceName: String; var AdditionalInfo: TAdditionalInfo); virtual;    
@@ -156,6 +156,10 @@ implementation
 
 uses
   SysUtils, StrUtils, DefRegistry, StrRect;
+
+{$IFDEF FPC_DisableWarns}
+  {$WARN 5024 OFF} // Parameter "$1" not used
+{$ENDIF}
 
 {==============================================================================}
 {------------------------------------------------------------------------------}

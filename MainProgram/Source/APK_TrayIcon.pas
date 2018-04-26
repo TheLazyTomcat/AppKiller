@@ -86,6 +86,10 @@ implementation
 uses
   Classes, Math, ShellAPI, Forms, APK_Strings, StrRect;
 
+{$IFDEF FPC_DisableWarns}
+  {$WARN 5057 OFF} // Local variable "$1" does not seem to be initialized
+{$ENDIF}
+
 {$R '..\Resources\tray_icon.res'}
 
 {==============================================================================}
@@ -163,7 +167,7 @@ If Msg.Msg = fMessageID then
                           SetForegroundWindow(Screen.ActiveForm.Handle)
                         else
                           SetForegroundWindow(Application.MainForm.Handle);
-                        GetCursorPos({%H-}PopupPoint);
+                        GetCursorPos(PopupPoint);
                         fPopupMenu.Popup(PopupPoint.X,PopupPoint.Y);
                         Handled := True;
                       end;

@@ -13,7 +13,7 @@ interface
 
 uses
   Windows, SysUtils, Variants, Classes, Graphics, Controls, Forms, Dialogs,
-  StdCtrls, ExtCtrls, ComCtrls, ImgList,
+  StdCtrls, ExtCtrls, ComCtrls, {$IFNDEF FPC}ImgList, {$ENDIF}
   APK_ProcEnum;
 
 type
@@ -49,7 +49,7 @@ type
     procedure btnCancelClick(Sender: TObject);  
     procedure tmrLoadingTimerTimer(Sender: TObject);
     procedure lvRunningProcessesColumnClick(Sender: TObject; Column: TListColumn);
-    procedure lvRunningProcessesCompare(Sender: TObject; Item1, Item2: TListItem; {%H-}Data: Integer; var Compare: Integer);
+    procedure lvRunningProcessesCompare(Sender: TObject; Item1, Item2: TListItem; Data: Integer; var Compare: Integer);
   private
     fSelectedProcesses: TStringList;
   protected
@@ -79,6 +79,11 @@ implementation
 
 uses
   CommCtrl;
+
+{$IFDEF FPC_DisableWarns}
+  {$WARN 5024 OFF} // Parameter "$1" not used
+  {$WARN 5057 OFF} // Local variable "$1" does not seem to be initialized
+{$ENDIF}
 
 procedure TfAddProcForm.OnEnumerated(Sender: TOBject);
 var
@@ -150,7 +155,7 @@ begin
 If Column >= 0 then
   begin
     Header := ListView_GetHeader(lvRunningProcesses.Handle);
-    FillChar({%H-}Item,SizeOf(Item),0);
+    FillChar(Item,SizeOf(Item),0);
     Item.Mask := HDI_FORMAT;
     Header_GetItem(Header,Column,Item);
     Item.fmt := Item.fmt and not (HDF_SORTUP or HDF_SORTDOWN);

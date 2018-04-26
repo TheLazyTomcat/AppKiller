@@ -9,9 +9,6 @@
       <Title Value="AppKiller"/>
       <ResourceType Value="res"/>
       <UseXPManifest Value="True"/>
-      <XPManifest>
-        <ExecutionLevel Value="requireAdministrator"/>
-      </XPManifest>
       <Icon Value="0"/>
     </General>
     <i18n>
@@ -22,7 +19,7 @@
       <AutoIncrementBuild Value="True"/>
       <MajorVersionNr Value="3"/>
       <RevisionNr Value="1"/>
-      <BuildNr Value="38"/>
+      <BuildNr Value="39"/>
       <Language Value="0405"/>
       <StringTable Comments="Main program of AppKiller 3.x" CompanyName="František Milt" FileDescription="Application Killer" InternalName="AppKiller" LegalCopyright="© 2010 - 2017 František Milt" LegalTrademarks="AppKiller" OriginalFilename="AppKiller.exe" ProductName="AppKiller 3" ProductVersion="3.0.1"/>
     </VersionInfo>

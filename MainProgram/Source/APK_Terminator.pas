@@ -52,7 +52,12 @@ implementation
 
 uses
   Windows, Messages, SysUtils,{$IFDEF FPC} jwaPSApi{$ELSE} PSApi{$ENDIF}, 
-  APK_ProcEnum, StrRect;
+  APK_ProcEnum, APK_System, StrRect, AuxTypes;
+
+{$IFDEF FPC_DisableWarns}
+  {$WARN 4055 OFF} // Conversion between ordinals and pointers is not portable
+  {$WARN 5057 OFF} // Local variable "$1" does not seem to be initialized
+{$ENDIF}
 
 {==============================================================================}
 {------------------------------------------------------------------------------}
@@ -225,7 +230,7 @@ begin
 ForegroundWindow := GetForegroundWindow;
 If ForegroundWindow <> 0 then
   begin
-    GetWindowThreadProcessId(ForegroundWindow,{%H-}ProcessID);
+    GetWindowThreadProcessId(ForegroundWindow,ProcessID);
     If not IsInTerminatingList(ProcessID) then
       begin
         ProcessHandle := OpenProcess(PROCESS_QUERY_INFORMATION or PROCESS_VM_READ or PROCESS_TERMINATE,False,ProcessID);
@@ -296,8 +301,8 @@ begin
   Result := False;
   If hwnd <> 0 then
     begin
-      SetLength({%H-}PWindowHandles(lParam)^,Length({%H-}PWindowHandles(lParam)^) + 1);
-      {%H-}PWindowHandles(lParam)^[High({%H-}PWindowHandles(lParam)^)] := hwnd;
+      SetLength(PWindowHandles(lParam)^,Length(PWindowHandles(lParam)^) + 1);
+      PWindowHandles(lParam)^[High(PWindowHandles(lParam)^)] := hwnd;
       Result := True;
     end;
 end;
@@ -306,18 +311,18 @@ procedure TAPKTerminatorThread.TerminateUnresponsive;
 var
   Windows:        TWindowHandles;
   i:              Integer;
-  MsgResult:      DWORD;
+  MsgResult:      PtrUInt;
   ProcessID:      DWORD;
   ProcessHandle:  THandle;
   ProcessName:    String;
 begin
-If EnumWindows(@EnumWindowsCallback,{%H-}LPARAM(@Windows)) then
+If EnumWindows(@EnumWindowsCallback,LPARAM(@Windows)) then
   For i := Low(Windows) to High(Windows) do
     begin
-      If SendMessageTimeout(Windows[i],WM_NULL,0,0,SMTO_ABORTIFHUNG or SMTO_BLOCK,fLocalSettings.Settings.GeneralSettings.ResponseTimeout,{%H-}MsgResult) = 0 then
+      If SendMessageTimeout(Windows[i],WM_NULL,0,0,SMTO_ABORTIFHUNG or SMTO_BLOCK,fLocalSettings.Settings.GeneralSettings.ResponseTimeout,@MsgResult) = 0 then
         begin
           ProcessID := 0;
-          GetWindowThreadProcessId(Windows[i],{%H-}ProcessID);
+          GetWindowThreadProcessId(Windows[i],ProcessID);
           If (ProcessID <> 0) and not IsInTerminatingList(ProcessID) then
             begin
               ProcessHandle := OpenProcess(PROCESS_QUERY_INFORMATION or PROCESS_VM_READ or PROCESS_TERMINATE,False,ProcessID);
