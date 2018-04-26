@@ -51,6 +51,10 @@ implementation
 uses
   APK_Strings;
 
+{$IFDEF FPC_DisableWarns}
+  {$WARN 5024 OFF} // Parameter "$1" not used
+{$ENDIF}
+
 procedure TfShortcutForm.OnShortcutSelect(Sender: TObject; Shortcut: TAPKShortcut);
 begin
 Self.Shortcut := Shortcut;

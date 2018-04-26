@@ -81,6 +81,13 @@ uses
   SysUtils, StrUtils, {$IFDEF FPC} jwaTlHelp32{$ELSE} TlHelp32{$ENDIF},
   WinFileInfo, APK_System, StrRect;
 
+{$IFDEF FPC_DisableWarns}
+  {$WARN 5024 OFF} // Parameter "$1" not used
+  {$IF Defined(FPC) and (FPC_FULLVERSION >= 30000)}
+    {$WARN 5092 OFF} // Variable "$1" of a managed type does not seem to be initialized
+  {$IFEND}
+{$ENDIF}
+
 {==============================================================================}
 {   Auxiliary functions - implementations                                      }
 {==============================================================================}

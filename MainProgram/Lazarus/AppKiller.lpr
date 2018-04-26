@@ -17,15 +17,9 @@ uses
   AddProcForm,
   ShortcutForm,
 
-  APK_System,
   APK_Strings,
   APK_InstanceControl,
-  APK_TrayIcon,
-  APK_Settings,
-  APK_Keyboard,
-  APK_ProcEnum,
-  APK_Terminator,
-  APK_Manager;
+  APK_Settings;
 
 {$R *.res}
 

@@ -118,6 +118,10 @@ uses
   APK_System, APK_Strings, APK_TrayIcon, APK_Keyboard, APK_Settings,
   AddProcForm, ShortcutForm;
 
+{$IFDEF FPC_DisableWarns}
+  {$WARN 5024 OFF} // Parameter "$1" not used
+{$ENDIF}
+
 var
   WindowFunc: Pointer;
 

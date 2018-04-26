@@ -2385,7 +2385,7 @@ object fMainForm: TfMainForm
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   Position = poScreenCenter
-  LCLVersion = '1.6.4.0'
+  LCLVersion = '1.8.2.0'
   object shpHeader: TShape
     Left = 0
     Height = 81

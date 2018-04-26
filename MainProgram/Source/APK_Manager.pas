@@ -58,6 +58,10 @@ implementation
 uses
   SysUtils, StrRect, APK_Strings;
 
+{$IFDEF FPC_DisableWarns}
+  {$WARN 5024 OFF} // Parameter "$1" not used
+{$ENDIF}
+
 {==============================================================================}
 {------------------------------------------------------------------------------}
 {                                 TAPKManager                                  }
