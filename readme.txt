@@ -1,4 +1,4 @@
---------------------------------------------------------------------------------
+﻿--------------------------------------------------------------------------------
                                  AppKiller 3.x
 --------------------------------------------------------------------------------
 
@@ -119,7 +119,7 @@ Changelog
 List of changes between individual versions of this program.
 
 AppKiller 3.0.0 -> AppKiller 3.0.1
-  - program is now UAC-aware and runs at administrative privilige level
+  - program is now UAC-aware and runs at administrative privilege level
   - ...therefore it can access and terminate processes with higher privileges
   - changed how is the program started at system start (via Task Scheduler)
   - list of running processes can be sorted
