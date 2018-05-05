@@ -37,6 +37,7 @@ unit SimpleLog;
   {.$DEFINE BARE_FPC}
   {$MODE ObjFPC}{$H+}
   {$DEFINE FPC_DisableWarns}
+  {$MACRO ON}
 {$ENDIF}
 
 {$IF Defined(FPC) and not Defined(Unicode) and not Defined(BARE_FPC) and (FPC_FULLVERSION < 20701)}
@@ -170,10 +171,15 @@ uses
   Windows, StrUtils, StrRect {$IFDEF UTF8Wrappers}, LazFileUtils {$ENDIF};
 
 {$IFDEF FPC_DisableWarns}
-  {$WARN 5057 OFF} // Local variable "$1" does not seem to be initialized
+  {$DEFINE FPCDWM}
+  {$DEFINE W5057:={$WARN 5057 OFF}} // Local variable "$1" does not seem to be initialized
+  {$PUSH}{$WARN 2005 OFF} // Comment level $1 found
   {$IF Defined(FPC) and (FPC_FULLVERSION >= 30000)}
-    {$WARN 5092 OFF} // Variable "$1" of a managed type does not seem to be initialized
+    {$DEFINE W5092:={$WARN 5092 OFF}} // Variable "$1" of a managed type does not seem to be initialized
+  {$ELSE}
+    {$DEFINE W5092:=}
   {$IFEND}
+  {$POP}
 {$ENDIF}
 
 Function _FileExists(const FileName: String): Boolean;
@@ -206,6 +212,7 @@ const
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5057{$ENDIF}
 Function SLCB_Output(var F: TTextRec): Integer;
 var
   CharsWritten: DWord;
@@ -234,9 +241,11 @@ If WriteConsoleA(F.Handle,F.BufPtr,F.BufPos,CharsWritten,nil) then
 else Result := ERR_WRITE_FAILED;
 F.BufPos := 0;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5057{$ENDIF}
 Function SLCB_Input(var F: TTextRec): Integer;
 var
   CharsRead:  DWord;
@@ -272,6 +281,7 @@ If ReadConsoleA(F.Handle,F.BufPtr,F.BufSize,CharsRead,nil) then
 else Result := ERR_READ_FAILED;
 F.BufPos := 0;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
@@ -498,6 +508,7 @@ end;
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5092{$ENDIF}
 procedure TSimpleLog.ProtectedAddLog(LogText: String; IndentCount: Integer = 0; LineBreak: Boolean = True);
 var
   i:    Integer;
@@ -519,6 +530,7 @@ If fStreamToFile then
 Inc(fLogCounter);
 If Assigned(fOnLog) then fOnLog(Self,LogText);
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 {------------------------------------------------------------------------------}
 {    TSimpleLog // Public routines                                             }

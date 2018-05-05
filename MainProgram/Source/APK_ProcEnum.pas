@@ -82,10 +82,15 @@ uses
   WinFileInfo, APK_System, StrRect;
 
 {$IFDEF FPC_DisableWarns}
-  {$WARN 5024 OFF} // Parameter "$1" not used
+  {$DEFINE FPCDWM}
+  {$DEFINE W5024:={$WARN 5024 OFF}} // Parameter "$1" not used
+  {$PUSH}{$WARN 2005 OFF} // Comment level $1 found
   {$IF Defined(FPC) and (FPC_FULLVERSION >= 30000)}
-    {$WARN 5092 OFF} // Variable "$1" of a managed type does not seem to be initialized
+    {$DEFINE W5092:={$WARN 5092 OFF}} // Variable "$1" of a managed type does not seem to be initialized
+  {$ELSE}
+    {$DEFINE W5092:=}
   {$IFEND}
+  {$POP}
 {$ENDIF}
 
 {==============================================================================}
@@ -267,6 +272,7 @@ end;
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5092{$ENDIF}
 procedure TAPKProcessEnumeratorInternal.EnumerateDevices;
 type
   AoStr = array of String;
@@ -325,6 +331,7 @@ For i := High(fDevices) downto Low(fDevices) do
       SetLength(fDevices,Length(fDevices) - 1);
     end;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
@@ -554,10 +561,12 @@ end;
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TAPKProcessEnumeratorThread.EnumerationDoneHandler(Sender: TObject);
 begin
 Synchronize(sync_DoEnumerationDone);
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
@@ -646,6 +655,7 @@ end;
 {   TAPKProcessEnumerator - protected methods                                  }
 {------------------------------------------------------------------------------}
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TAPKProcessEnumerator.ThreadEnumDoneHandler(Sender: TObject);
 begin
 Clear;
@@ -653,6 +663,7 @@ TAPKProcessEnumeratorThread(fEnumThread).FillProcessList(fProcesses);
 fEnumStage := esDone;
 If Assigned(fOnEnumerationDone) then fOnEnumerationDone(Self);
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 

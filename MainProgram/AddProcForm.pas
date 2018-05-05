@@ -81,8 +81,9 @@ uses
   CommCtrl;
 
 {$IFDEF FPC_DisableWarns}
-  {$WARN 5024 OFF} // Parameter "$1" not used
-  {$WARN 5057 OFF} // Local variable "$1" does not seem to be initialized
+  {$DEFINE FPCDWM}
+  {$DEFINE W5024:={$WARN 5024 OFF}} // Parameter "$1" not used
+  {$DEFINE W5057:={$WARN 5057 OFF}} // Local variable "$1" does not seem to be initialized
 {$ENDIF}
 
 procedure TfAddProcForm.OnEnumerated(Sender: TOBject);
@@ -135,11 +136,13 @@ end;
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfAddProcForm.ActiveControlChange(Sender: TObject);
 begin
 PreviousCtrl := ActiveCtrl;
 ActiveCtrl := ActiveControl;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
@@ -147,6 +150,8 @@ const
   HDF_SORTUP   = $0400;
   HDF_SORTDOWN = $0200;
 
+
+{$IFDEF FPCDWM}{$PUSH}W5057{$ENDIF}
 procedure TfAddProcForm.ShowColumnArrow(Column: Integer; ArrowState: TArrowState);
 var
   Header: HWND;
@@ -168,6 +173,7 @@ If Column >= 0 then
     Header_SetItem(Header,Column,Item);
   end;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
@@ -187,6 +193,7 @@ end;
 
 //==============================================================================
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfAddProcForm.FormCreate(Sender: TObject);
 begin
 lvRunningProcesses.DoubleBuffered := True;
@@ -202,18 +209,22 @@ fSelectedProcesses := TStringList.Create;
 SrtDescending := False;
 SrtColumnIdx := -1;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
-
+  
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfAddProcForm.FormDestroy(Sender: TObject);
 begin
 fSelectedProcesses.Free;
 Screen.OnActiveControlChange := nil;
 Enumerator.Free;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfAddProcForm.leProcessNameKeyPress(Sender: TObject; var Key: Char);
 begin
 If Key = #13 then
@@ -222,17 +233,21 @@ If Key = #13 then
     btnAccept.OnClick(nil);
   end;
 end;
- 
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
+
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfAddProcForm.btnBrowseClick(Sender: TObject);
 begin
 If diaBrowse.Execute then
   leProcessName.Text := ExtractFileName(diaBrowse.FileName);
 end;
- 
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
+
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfAddProcForm.lvRunningProcessesResize(Sender: TObject);
 var
   i:        Integer;
@@ -246,16 +261,20 @@ lvRunningProcesses.Columns[5].Width := NewWidth;
 lvRunningProcesses.Scroll(0,0);
 {$ENDIF}
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfAddProcForm.lvRunningProcessesDeletion(Sender: TObject; Item: TListItem);
 begin
 Dispose(PInteger(Item.Data));
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfAddProcForm.lvRunningProcessesDblClick(Sender: TObject);
 begin
 If lvRunningProcesses.ItemIndex >= 0 then
@@ -264,24 +283,30 @@ If lvRunningProcesses.ItemIndex >= 0 then
     Close;
   end;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfAddProcForm.cbShowAllClick(Sender: TObject);
 begin
 OnEnumerated(Enumerator);
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfAddProcForm.btnRefreshClick(Sender: TObject);
 begin
 tmrLoadingTimer.Enabled := True;
 Enumerator.Enumerate(True);
 end;
- 
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
+
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfAddProcForm.btnAcceptClick(Sender: TObject);
 var
   i:  Integer;
@@ -307,16 +332,20 @@ else
     else MessageDlg('Process name cannot be empty.',mtError,[mbOK],0);
   end;
 end;
- 
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
+
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfAddProcForm.btnCancelClick(Sender: TObject);
 begin
 Close;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfAddProcForm.tmrLoadingTimerTimer(Sender: TObject);
 begin
 lblLoading.Caption := 'Loading' + StringOfChar('.',tmrLoadingTimer.Tag);
@@ -325,6 +354,7 @@ If tmrLoadingTimer.Tag > 2 then
 else
   tmrLoadingTimer.Tag := tmrLoadingTimer.Tag + 1;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
@@ -349,6 +379,7 @@ end;
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfAddProcForm.lvRunningProcessesCompare(Sender: TObject; Item1,
   Item2: TListItem; Data: Integer; var Compare: Integer);
 begin
@@ -361,5 +392,6 @@ else
 end;
 If SrtDescending then Compare := -Compare;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 end.

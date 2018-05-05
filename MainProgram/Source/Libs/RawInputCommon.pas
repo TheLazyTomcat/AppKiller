@@ -17,6 +17,7 @@
 
   Dependencies:
     AuxTypes       - github.com/ncs-sniper/Lib.AuxTypes
+    AuxClasses     - github.com/ncs-sniper/Lib.AuxClasses
     BitOps         - github.com/ncs-sniper/Lib.BitOps
     MulticastEvent - github.com/ncs-sniper/Lib.MulticastEvent
     WndAlloc       - github.com/ncs-sniper/Lib.WndAlloc
@@ -38,7 +39,7 @@ interface
 
 uses
   Windows, Classes,
-  WinRawInput;
+  AuxClasses, WinRawInput;
 
 type
   TPreparsedData = array of Byte;
@@ -79,7 +80,7 @@ type
 {   TRawInputProcessingObject - declaration                                    }
 {==============================================================================}
 
-  TRawInputProcessingObject = class(TObject)
+  TRawInputProcessingObject = class(TCustomObject)
   private
     fActive:              Boolean;
     fDeviceInfo:          TDeviceListItem;

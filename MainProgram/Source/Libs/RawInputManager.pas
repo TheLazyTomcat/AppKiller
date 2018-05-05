@@ -17,6 +17,7 @@
 
   Dependencies:
     AuxTypes       - github.com/ncs-sniper/Lib.AuxTypes
+    AuxClasses     - github.com/ncs-sniper/Lib.AuxClasses    
     BitOps         - github.com/ncs-sniper/Lib.BitOps
     MulticastEvent - github.com/ncs-sniper/Lib.MulticastEvent
     WndAlloc       - github.com/ncs-sniper/Lib.WndAlloc
@@ -38,7 +39,7 @@ interface
 
 uses
   Windows, Messages, Classes,
-  WinRawInput, UtilityWindow,
+  WinRawInput, UtilityWindow, AuxClasses,
   RawInputCommon, RawInputKeyboard;
 
 {==============================================================================}
@@ -64,7 +65,7 @@ type
 {   TRawInputManager - declaration                                             }
 {==============================================================================}
 
-  TRawInputManager = class(TObject)
+  TRawInputManager = class(TCustomObject)
   private
     fTargetHWND:                    HWND;
     fActive:                        Boolean;
@@ -158,7 +159,8 @@ uses
   SysUtils, StrUtils, DefRegistry, StrRect;
 
 {$IFDEF FPC_DisableWarns}
-  {$WARN 5024 OFF} // Parameter "$1" not used
+  {$DEFINE FPCDWM}
+  {$DEFINE W5024:={$WARN 5024 OFF}} // Parameter "$1" not used
 {$ENDIF}
 
 {==============================================================================}
@@ -363,6 +365,7 @@ end;
 
 //   ---   ---   ---   ---   ---   ---   ---   ---   ---   ---   ---   ---   ---
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TRawInputManager.ProcessRawInput(lParam: lParam; wParam: wParam);
 var
   RawInputSize: UINT;
@@ -379,6 +382,7 @@ If GetRawInputData(HRAWINPUT(lParam),RID_INPUT,nil,@RawInputSize,SizeOf(TRawInpu
         ProcessRawInput(fRawInputBuffer);
     end;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
@@ -412,6 +416,7 @@ end;
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TRawInputManager.UnknownDeviceIntercepted(Sender: TObject; DeviceHandle: THandle);
 begin
 If IndexOfDevice(DeviceHandle) < 0 then
@@ -422,6 +427,7 @@ If IndexOfDevice(DeviceHandle) < 0 then
     If Assigned(fOnDevicesListChange) then fOnDevicesListChange(Self);
   end;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 

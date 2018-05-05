@@ -119,7 +119,8 @@ uses
   AddProcForm, ShortcutForm;
 
 {$IFDEF FPC_DisableWarns}
-  {$WARN 5024 OFF} // Parameter "$1" not used
+  {$DEFINE FPCDWM}
+  {$DEFINE W5024:={$WARN 5024 OFF}} // Parameter "$1" not used
 {$ENDIF}
 
 var
@@ -134,6 +135,7 @@ end;
 
 //==============================================================================
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.OnTrayMenuItem(Sender: TObject; aAction: Integer);
 begin
 case aAction of
@@ -153,13 +155,16 @@ case aAction of
     end;
 end;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.OnSettingsUpdateRequired(Sender: TObject);
 begin
 FormToSettings;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
@@ -256,6 +261,7 @@ end;
 
 //==============================================================================
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.FormCreate(Sender: TObject);
 begin
 WindowFunc := APK_System.SetWindowLongPtr(Handle,GWL_WNDPROC,@WndCallback);
@@ -283,19 +289,23 @@ AppKillerManager.Log.ExternalLogAdd(meLog.Lines);
 AppKillerManager.Initialize;
 SettingsToForm;
 ShortcutChanged;
-end;
+end;  
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.FormDestroy(Sender: TObject);
 begin
 FormToSettings;
 AppKillerManager.Finalize;
 AppKillerManager.Free;
-end;
+end;  
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 begin
 If not ForceClose then
@@ -306,32 +316,40 @@ If not ForceClose then
     If Visible then Hide;
   end
 else CanClose := True;
-end;
+end;  
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.clbProcTermDblClick(Sender: TObject);
 begin
 pmniTermList_Add.OnClick(nil);
-end;
+end;   
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.clbProcNoTermDblClick(Sender: TObject);
 begin
 pmniNoTermList_Add.OnClick(nil);
-end;
+end;    
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.btnStartTerminationClick(Sender: TObject);
 begin
 AppKillerManager.Log.AddLog('Termination started from GUI...');
 AppKillerManager.Terminate;
-end;
+end; 
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.btnChangeShortcutClick(Sender: TObject);
 begin
 AppKillerManager.Keyboard.Mode := kmNone;
@@ -344,10 +362,12 @@ try
 finally
   AppKillerManager.Keyboard.Mode := kmIntercept;
 end;
-end;
+end;  
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.pmnTermListPopup(Sender: TObject);
 begin
 pmniTermList_Remove.Enabled := clbProcTerm.ItemIndex >= 0;
@@ -356,20 +376,24 @@ pmniTermList_UnmarkAll.Enabled := clbProcTerm.Count > 0;
 pmniTermList_Invert.Enabled := clbProcTerm.Count > 0;
 pmniTermList_MoveUp.Enabled := clbProcTerm.ItemIndex > 0;
 pmniTermList_MoveDown.Enabled := (clbProcTerm.ItemIndex >= 0) and (clbProcTerm.ItemIndex < Pred(clbProcTerm.Count));
-end;
+end;  
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.pmnTermListClose(Sender: TObject);
 var
   i:  Integer;
 begin
 For i := 0 to Pred(pmnTermList.Items.Count) do
   pmnTermList.Items[i].Enabled := True;
-end;
+end; 
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.pmniTermList_AddClick(Sender: TObject);
 var
   i:  Integer;
@@ -379,19 +403,23 @@ If fAddProcForm.ShowAsPrompt('Add process to "for termination" list') then
     If (fAddProcForm.SelectedProcesses[i] <> '') and (clbProcTerm.Items.IndexOf(fAddProcForm.SelectedProcesses[i]) < 0) then
       clbProcTerm.Checked[clbProcTerm.Items.Add(fAddProcForm.SelectedProcesses[i])] := True;
 UpdateListsStyle;
-end;
+end; 
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.pmniTermList_RemoveClick(Sender: TObject);
 begin
 If clbProcTerm.ItemIndex >= 0 then
   clbProcTerm.Items.Delete(clbProcTerm.ItemIndex);
 UpdateListsStyle;
-end;
+end;   
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
-
+ 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.pmniTermList_MarkAllClick(Sender: TObject);
 var
   i:  Integer;
@@ -399,29 +427,35 @@ begin
 For i := 0 to Pred(clbProcTerm.Count) do
   clbProcTerm.Checked[i] := True;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.pmniTermList_UnmarkAllClick(Sender: TObject);
 var
   i:  Integer;
 begin
 For i := 0 to Pred(clbProcTerm.Count) do
   clbProcTerm.Checked[i] := False;
-end;
+end; 
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.pmniTermList_InvertClick(Sender: TObject);
 var
   i:  Integer;
 begin
 For i := 0 to Pred(clbProcTerm.Count) do
   clbProcTerm.Checked[i] := not clbProcTerm.Checked[i];
-end;
+end;  
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
  
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.pmniTermList_MoveUpClick(Sender: TObject);
 begin
 If clbProcTerm.ItemIndex > 0 then
@@ -431,10 +465,12 @@ If clbProcTerm.ItemIndex > 0 then
     clbProcTerm.ItemIndex := clbProcTerm.ItemIndex - 1;
   {$ENDIF}
   end;
-end;
+end; 
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.pmniTermList_MoveDownClick(Sender: TObject);
 begin
 If (clbProcTerm.ItemIndex >= 0) and (clbProcTerm.ItemIndex < Pred(clbProcTerm.Count)) then
@@ -444,10 +480,12 @@ If (clbProcTerm.ItemIndex >= 0) and (clbProcTerm.ItemIndex < Pred(clbProcTerm.Co
     clbProcTerm.ItemIndex := clbProcTerm.ItemIndex + 1;
   {$ENDIF}
   end;
-end;
+end; 
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.pmnNoTermListPopup(Sender: TObject);
 begin
 pmniNoTermList_Remove.Enabled := clbProcNoTerm.ItemIndex >= 0;
@@ -456,20 +494,24 @@ pmniNoTermList_UnmarkAll.Enabled := clbProcNoTerm.Count > 0;
 pmniNoTermList_Invert.Enabled := clbProcNoTerm.Count > 0;
 pmniNoTermList_MoveUp.Enabled := clbProcNoTerm.ItemIndex > 0;
 pmniNoTermList_MoveDown.Enabled := (clbProcNoTerm.ItemIndex >= 0) and (clbProcNoTerm.ItemIndex < Pred(clbProcNoTerm.Count));
-end;
+end; 
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.pmnNoTermListClose(Sender: TObject);
 var
   i:  Integer;
 begin
 For i := 0 to Pred(pmnNoTermList.Items.Count) do
   pmnNoTermList.Items[i].Enabled := True;
-end;
+end;  
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.pmniNoTermList_AddClick(Sender: TObject);
 var
   i:  Integer;
@@ -480,18 +522,22 @@ If fAddProcForm.ShowAsPrompt('Add process to "never terminate" list') then
       clbProcNoTerm.Checked[clbProcNoTerm.Items.Add(fAddProcForm.SelectedProcesses[i])] := True;
 UpdateListsStyle;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.pmniNoTermList_RemoveClick(Sender: TObject);
 begin
 If clbProcNoTerm.ItemIndex >= 0 then
   clbProcNoTerm.Items.Delete(clbProcNoTerm.ItemIndex);
 UpdateListsStyle;  
-end;
+end; 
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.pmniNoTermList_MarkAllClick(Sender: TObject);
 var
   i:  Integer;
@@ -499,9 +545,11 @@ begin
 For i := 0 to Pred(clbProcNoTerm.Count) do
   clbProcNoTerm.Checked[i] := True;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
  
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.pmniNoTermList_UnmarkAllClick(Sender: TObject);
 var
   i:  Integer;
@@ -509,9 +557,11 @@ begin
 For i := 0 to Pred(clbProcNoTerm.Count) do
   clbProcNoTerm.Checked[i] := False;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
  
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.pmniNoTermList_InvertClick(Sender: TObject);
 var
   i:  Integer;
@@ -519,9 +569,11 @@ begin
 For i := 0 to Pred(clbProcNoTerm.Count) do
   clbProcNoTerm.Checked[i] := not clbProcNoTerm.Checked[i];
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
  
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.pmniNoTermList_MoveUpClick(Sender: TObject);
 begin
 If clbProcNoTerm.ItemIndex > 0 then
@@ -532,9 +584,11 @@ If clbProcNoTerm.ItemIndex > 0 then
   {$ENDIF}
   end;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
  
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfMainForm.pmniNoTermList_MoveDownClick(Sender: TObject);
 begin
 If (clbProcNoTerm.ItemIndex >= 0) and (clbProcNoTerm.ItemIndex < Pred(clbProcNoTerm.Count)) then
@@ -545,5 +599,6 @@ If (clbProcNoTerm.ItemIndex >= 0) and (clbProcNoTerm.ItemIndex < Pred(clbProcNoT
   {$ENDIF}
   end;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 end.

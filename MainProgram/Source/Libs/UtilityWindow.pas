@@ -15,6 +15,7 @@
 
   Dependencies:
     AuxTypes       - github.com/ncs-sniper/Lib.AuxTypes
+    AuxClasses     - github.com/ncs-sniper/Lib.AuxClasses
     MulticastEvent - github.com/ncs-sniper/Lib.MulticastEvent
     WndAlloc       - github.com/ncs-sniper/Lib.WndAlloc
 
@@ -28,6 +29,7 @@ unit UtilityWindow;
 {$IFDEF FPC}
   {$MODE Delphi}
   {$DEFINE FPC_DisableWarns}
+  {$MACRO ON}
 {$ENDIF}
 
 {$TYPEINFO ON}
@@ -35,7 +37,7 @@ unit UtilityWindow;
 interface
 
 uses
-  Windows, Messages, MulticastEvent;
+  Windows, Messages, AuxClasses, MulticastEvent;
 
 type
   TMessageEvent = procedure(var Msg: TMessage; var Handled: Boolean) of object;
@@ -56,7 +58,7 @@ type
 {--- TUtilityWindow declarationn ----------------------------------------------}
 {==============================================================================}
 
-  TUtilityWindow = class(TObject)
+  TUtilityWindow = class(TCustomObject)
   private
     fWindowHandle:  HWND;
     fOnMessage:     TMulticastMessageEvent;
@@ -77,7 +79,8 @@ uses
   SysUtils, Classes, WndAlloc;
 
 {$IFDEF FPC_DisableWarns}
-  {$WARN 5057 OFF} // Local variable "$1" does not seem to be initialized
+  {$DEFINE FPCDWM}
+  {$DEFINE W5057:={$WARN 5057 OFF}} // Local variable "$1" does not seem to be initialized
 {$ENDIF}
 
 {==============================================================================}
@@ -157,6 +160,7 @@ end;
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5057{$ENDIF}
 procedure TUtilityWindow.ProcessMessages(Synchronous: Boolean = False);
 var
   Msg:  TagMSG;
@@ -178,5 +182,6 @@ else
       end;
   end;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 end.

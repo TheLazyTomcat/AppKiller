@@ -9,12 +9,13 @@
 
   BitVector classes
 
-  ©František Milt 2017-07-18
+  ©František Milt 2018-05-02
 
-  Version 1.2
+  Version 1.3
 
   Dependencies:
     AuxTypes    - github.com/ncs-sniper/Lib.AuxTypes
+    AuxClasses  - github.com/ncs-sniper/Lib.AuxClasses
     BitOps      - github.com/ncs-sniper/Lib.BitOps
     StrRect     - github.com/ncs-sniper/Lib.StrRect
   * SimpleCPUID - github.com/ncs-sniper/Lib.SimpleCPUID
@@ -29,44 +30,53 @@ interface
 {$IFDEF FPC}
   {$MODE Delphi}
   {$DEFINE FPC_DisableWarns}
+  {$MACRO ON}
 {$ENDIF}
 
 {$TYPEINFO ON}
 
 uses
-  Classes, AuxTypes;
+  Classes, AuxTypes, AuxClasses;
 
 type
-{==============================================================================}
-{------------------------------------------------------------------------------}
-{                           TBitVector - declaration                           }
-{------------------------------------------------------------------------------}
-{==============================================================================}
-  TBitVector = class(TObject)
+{===============================================================================
+--------------------------------------------------------------------------------
+                                   TBitVector                                   
+--------------------------------------------------------------------------------
+===============================================================================}
+
+{===============================================================================
+    TBitVector - class declaration
+===============================================================================}
+
+  TBitVector = class(TCustomListObject)
   private
-    fOwnsMemory:  Boolean;
-    fStatic:      Boolean;
-    fMemSize:     TMemSize;
-    fMemory:      Pointer;
-    fCount:       Integer;
-    fPopCount:    Integer;
-    fChanging:    Integer;
-    fChanged:     Boolean;
-    fOnChange:    TNotifyEvent;
+    fOwnsMemory:    Boolean;
+    fStatic:        Boolean;
+    fMemSize:       TMemSize;
+    fMemory:        Pointer;
+    fCount:         Integer;
+    fPopCount:      Integer;
+    fChangeCounter: Integer;
+    fChanged:       Boolean;
+    fOnChange:      TNotifyEvent;
     Function GetBytePtrBitIdx(BitIndex: Integer): PByte;
     Function GetBytePtrByteIdx(ByteIndex: Integer): PByte;
     Function GetBit_LL(Index: Integer): Boolean;
     Function SetBit_LL(Index: Integer; Value: Boolean): Boolean;
     Function GetBit(Index: Integer): Boolean;
     procedure SetBit(Index: Integer; Value: Boolean);
-    Function GetCapacity: Integer;
-    procedure SetCapacity(Value: Integer); virtual;
-    procedure SetCount(Value: Integer); virtual;
   protected
+    Function GetCapacity: Integer; override;
+    procedure SetCapacity(Value: Integer); override;
+    Function GetCount: Integer; override;
+    procedure SetCount(Value: Integer); override;
     procedure ShiftDown(Idx1,Idx2: Integer); virtual;
     procedure ShiftUp(Idx1,Idx2: Integer); virtual;
+    procedure RaiseError(const ErrorMessage: String; Values: array of const); overload; virtual;
+    procedure RaiseError(const ErrorMessage: String); overload; virtual;
     Function MemoryEditable(MethodName: String = 'MemoryEditable'; RaiseException: Boolean = True): Boolean; virtual;
-    Function CheckIndex(Index: Integer; MethodName: String = 'CheckIndex'; RaiseException: Boolean = False): Boolean; virtual;
+    Function CheckIndexAndRaise(Index: Integer; MethodName: String = 'CheckIndex'): Boolean; virtual;
     procedure CommonInit; virtual;
     procedure ScanForPopCount; virtual;
     procedure DoOnChange; virtual;
@@ -76,12 +86,10 @@ type
     destructor Destroy; override;
     procedure BeginChanging;
     Function EndChanging: Integer;
-    Function LowIndex: Integer; virtual;
-    Function HighIndex: Integer; virtual;    
+    Function LowIndex: Integer; override;
+    Function HighIndex: Integer; override;
     Function First: Boolean; virtual;
     Function Last: Boolean; virtual;
-    Function Grow(Force: Boolean = False): Integer; virtual;
-    Function Shrink: Integer; virtual;
     Function Add(Value: Boolean): Integer; virtual;
     procedure Insert(Index: Integer; Value: Boolean); virtual;
     procedure Delete(Index: Integer); virtual;
@@ -119,27 +127,35 @@ type
   published
     property OwnsMemory: Boolean read fOwnsMemory;
     property Static: Boolean read fStatic;
-    property Capacity: Integer read GetCapacity write SetCapacity;
-    property Count: Integer read fCount write SetCount;
     property PopCount: Integer read fPopCount;
     property OnChange: TNotifyEvent read fOnChange write fOnChange;
   end;
 
-{==============================================================================}
-{------------------------------------------------------------------------------}
-{                        TBitVectorStatic - declaration                        }
-{------------------------------------------------------------------------------}
-{==============================================================================}
+{===============================================================================
+--------------------------------------------------------------------------------
+                                TBitVectorStatic
+--------------------------------------------------------------------------------
+===============================================================================}
+
+{===============================================================================
+    TBitVectorStatic - class declaration
+===============================================================================}
+
   TBitVectorStatic = class(TBitVector)
   protected
     procedure CommonInit; override;
   end;
 
-{==============================================================================}
-{------------------------------------------------------------------------------}
-{                       TBitVectorStatic32 - declaration                       }
-{------------------------------------------------------------------------------}
-{==============================================================================}
+{===============================================================================
+--------------------------------------------------------------------------------
+                               TBitVectorStatic32                               
+--------------------------------------------------------------------------------
+===============================================================================}
+
+{===============================================================================
+    TBitVectorStatic32 - class declaration
+===============================================================================}
+
   TBitVectorStatic32 = class(TBitVectorStatic)
   public
     constructor Create(Memory: Pointer; Count: Integer); overload; override;
@@ -156,33 +172,52 @@ uses
   SysUtils, Math, BitOps, StrRect;
 
 {$IFDEF FPC_DisableWarns}
-  {$WARN 4055 OFF} // Conversion between ordinals and pointers is not portable
+  {$DEFINE FPCDWM}
+  {$DEFINE W4055:={$WARN 4055 OFF}} // Conversion between ordinals and pointers is not portable
 {$ENDIF}
 
-{==============================================================================}
-{------------------------------------------------------------------------------}
-{                         TBitVector - implementation                          }
-{------------------------------------------------------------------------------}
-{==============================================================================}  
+{===============================================================================
+--------------------------------------------------------------------------------
+                                   TBitVector                                   
+--------------------------------------------------------------------------------
+===============================================================================}
+
+{===============================================================================
+    TBitVector - auxiliaty constants and functions
+===============================================================================}
 
 const
   AllocDeltaBits  = 128;
   AllocDeltaBytes = AllocDeltaBits div 8;
 
-{==============================================================================}
-{   TBitVector - private methods                                               }
-{==============================================================================}
+Function BooleanOrd(Value: Boolean): Integer;
+begin
+If Value then Result := 1
+  else Result := 0;
+end;
+
+{===============================================================================
+    TBitVector - class implementation
+===============================================================================}
+
+{-------------------------------------------------------------------------------
+    TBitVector - private methods
+-------------------------------------------------------------------------------}
 
 Function TBitVector.GetBytePtrBitIdx(BitIndex: Integer): PByte;
 begin
+{$IFDEF FPCDWM}{$PUSH}W4055{$ENDIF}
 Result := PByte(PtrUInt(fMemory) + PtrUInt(BitIndex shr 3));
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 end;
 
 //------------------------------------------------------------------------------
 
 Function TBitVector.GetBytePtrByteIdx(ByteIndex: Integer): PByte;
 begin
+{$IFDEF FPCDWM}{$PUSH}W4055{$ENDIF}
 Result := PByte(PtrUInt(fMemory) + PtrUInt(ByteIndex));
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 end;
 
 //------------------------------------------------------------------------------
@@ -203,17 +238,16 @@ end;
 
 Function TBitVector.GetBit(Index: Integer): Boolean;
 begin
-If CheckIndex(Index) then
-  Result := GetBit_LL(Index)
-else
-  raise Exception.CreateFmt('TBitVector.GetBit: Index (%d) out of bounds.',[Index]);
+Result := False;
+If CheckIndexAndRaise(Index,'GetBit') then
+  Result := GetBit_LL(Index);
 end;
 
 //------------------------------------------------------------------------------
 
 procedure TBitVector.SetBit(Index: Integer; Value: Boolean);
 begin
-If CheckIndex(Index) then
+If CheckIndexAndRaise(Index,'SetBit') then
   begin
     If Value <> SetBit_LL(Index,Value) then
       begin
@@ -221,11 +255,12 @@ If CheckIndex(Index) then
           else Dec(fPopCount);
         DoOnChange;
       end;
-  end
-else raise Exception.CreateFmt('TBitVector.SetBit: Index (%d) out of bounds.',[Index]);
+  end;
 end;
 
-//------------------------------------------------------------------------------
+{-------------------------------------------------------------------------------
+    TBitVector - protected methods
+-------------------------------------------------------------------------------}
 
 Function TBitVector.GetCapacity: Integer;
 begin
@@ -236,7 +271,7 @@ end;
 
 procedure TBitVector.SetCapacity(Value: Integer);
 var
-  NewMemSize: PtrUInt;
+  NewMemSize: TMemSize;
 begin
 If MemoryEditable('SetCapacity') then
   begin
@@ -255,8 +290,15 @@ If MemoryEditable('SetCapacity') then
               end;
           end;
       end
-    else raise Exception.Create('TBitVector.SetCapacity: Negative capacity not allowed.');
+    else RaiseError('SetCapacity: Negative capacity not allowed.');
   end;
+end;
+
+//------------------------------------------------------------------------------
+
+Function TBitVector.GetCount: Integer;
+begin
+Result := fCount;
 end;
 
 //------------------------------------------------------------------------------
@@ -295,13 +337,11 @@ If MemoryEditable('SetCount') then
             end;
           end;
       end
-    else raise Exception.Create('TBitVector.SetCount: Negative count not allowed.');
+    else RaiseError('SetCount: Negative count not allowed.');
   end;
 end;
 
-{==============================================================================}
-{   TBitVector - protected methods                                             }
-{==============================================================================}
+//------------------------------------------------------------------------------
 
 procedure TBitVector.ShiftDown(Idx1,Idx2: Integer);
 var
@@ -335,10 +375,11 @@ If Idx2 > Idx1 then
         SetBit_LL(Idx1 or 7,Carry);
       end;
   end
-else raise Exception.CreateFmt('TBitVector.ShiftDown: First index (%d) must be smaller or equal to the second index (%d).',[Idx1,Idx2]);
+else RaiseError('ShiftDown: First index (%d) must be smaller or equal to the second index (%d).',[Idx1,Idx2]);
 end;
 
 //------------------------------------------------------------------------------
+
 procedure TBitVector.ShiftUp(Idx1,Idx2: Integer);
 var
   Carry:  Boolean;
@@ -371,7 +412,21 @@ If Idx2 > Idx1 then
         SetBit_LL(Idx2 and not 7,Carry);
       end;
   end
-else raise Exception.CreateFmt('TBitVector.ShiftDown: First index (%d) must be smaller or equal to the second index (%d).',[Idx1,Idx2]);
+else RaiseError('ShiftDown: First index (%d) must be smaller or equal to the second index (%d).',[Idx1,Idx2]);
+end;
+
+//------------------------------------------------------------------------------
+
+procedure TBitVector.RaiseError(const ErrorMessage: String; Values: array of const);
+begin
+raise Exception.CreateFmt(Format('%s.%s',[Self.ClassName,ErrorMessage]),Values);
+end;
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+procedure TBitVector.RaiseError(const ErrorMessage: String);
+begin
+RaiseError(ErrorMessage,[]);
 end;
 
 //------------------------------------------------------------------------------
@@ -382,19 +437,19 @@ Result := fOwnsMemory and not fStatic;
 If RaiseException then
   begin
     If fStatic then
-      raise Exception.CreateFmt('TBitVector.%s: Method not allowed for a static vector.',[MethodName]);  
+      RaiseError('%s: Method not allowed for a static vector.',[MethodName]);
     If not fOwnsMemory then
-      raise Exception.CreateFmt('TBitVector.%s: Method not allowed for not owned memory.',[MethodName]);
+      RaiseError('%s: Method not allowed for not owned memory.',[MethodName]);
   end;
 end;
 
 //------------------------------------------------------------------------------
 
-Function TBitVector.CheckIndex(Index: Integer; MethodName: String = 'CheckIndex'; RaiseException: Boolean = False): Boolean;
+Function TBitVector.CheckIndexAndRaise(Index: Integer; MethodName: String = 'CheckIndex'): Boolean;
 begin
-Result := (Index >= 0) and (Index < fCount);
-If not Result and RaiseException then
-  raise Exception.CreateFmt('TBitVector.%s: Index (%d) out of bounds.',[MethodName,Index]);
+Result := CheckIndex(Index);
+If not Result then
+  RaiseError('%s: Index (%d) out of bounds.',[MethodName,Index]);
 end;
 
 //------------------------------------------------------------------------------
@@ -402,7 +457,7 @@ end;
 procedure TBitVector.CommonInit;
 begin
 fStatic := False;
-fChanging := 0;
+fChangeCounter := 0;
 fChanged := False;
 fOnChange := nil;
 end;
@@ -428,12 +483,13 @@ end;
 procedure TBitVector.DoOnChange;
 begin
 fChanged := True;
-If (fChanging <= 0) and Assigned(fOnChange) then fOnChange(Self);
+If (fChangeCounter <= 0) and Assigned(fOnChange) then
+  fOnChange(Self);
 end;
 
-{==============================================================================}
-{   TBitVector - public methods                                                }
-{==============================================================================}
+{-------------------------------------------------------------------------------
+    TBitVector - public methods
+-------------------------------------------------------------------------------}
 
 constructor TBitVector.Create(Memory: Pointer; Count: Integer);
 begin
@@ -471,21 +527,23 @@ end;
 
 procedure TBitVector.BeginChanging;
 begin
-If fChanging <= 0 then fChanged := False;
-Inc(fChanging);
+If fChangeCounter <= 0 then
+  fChanged := False;
+Inc(fChangeCounter);
 end;
 
 //------------------------------------------------------------------------------
 
 Function TBitVector.EndChanging: Integer;
 begin
-Dec(fChanging);
-If fChanging <= 0 then
+Dec(fChangeCounter);
+If fChangeCounter <= 0 then
   begin
-    fChanging := 0;
-    If fChanged and Assigned(fOnChange) then fOnChange(Self);
+    fChangeCounter := 0;
+    If fChanged and Assigned(fOnChange) then
+      fOnChange(Self);
   end;
-Result := fChanging;  
+Result := fChangeCounter;  
 end;
 
 //------------------------------------------------------------------------------
@@ -518,32 +576,6 @@ end;
 
 //------------------------------------------------------------------------------
 
-Function TBitVector.Grow(Force: Boolean = False): Integer;
-begin
-If Force then
-  begin
-    Capacity := Capacity + AllocDeltaBits;
-    Result := Capacity;
-  end
-else
-  begin
-    If fCount >= Capacity then
-      Result := Grow(True)
-    else
-      Result := Capacity;
-  end;
-end;
-
-//------------------------------------------------------------------------------
-
-Function TBitVector.Shrink: Integer;
-begin
-Capacity := fCount;
-Result := Capacity;
-end;
-
-//------------------------------------------------------------------------------
-
 Function TBitVector.Add(Value: Boolean): Integer;
 begin
 If MemoryEditable('Add') then
@@ -551,7 +583,8 @@ If MemoryEditable('Add') then
     Grow;
     Inc(fCount);
     SetBit_LL(HighIndex,Value);
-    If Value then Inc(fPopCount);
+    If Value then
+      Inc(fPopCount);
     Result := HighIndex;
     DoOnChange;
   end
@@ -564,21 +597,20 @@ procedure TBitVector.Insert(Index: Integer; Value: Boolean);
 begin
 If MemoryEditable('Insert') then
   begin
-    If Index >= fCount then
-      Add(Value)
-    else
+    If Index < fCount then
       begin
-        If CheckIndex(Index) then
+        If CheckIndexAndRaise(Index,'Insert') then
           begin
             Grow;
             Inc(fCount);
             ShiftUp(Index,HighIndex);
             SetBit_LL(Index,Value);
-            If Value then Inc(fPopCount);
+            If Value then
+              Inc(fPopCount);
             DoOnChange;
-          end
-        else raise Exception.CreateFmt('TBitVector.Insert: Index (%d) out of bounds.',[Index]);
-      end;
+          end;
+      end
+    else Add(Value);
   end;
 end;
 
@@ -588,15 +620,16 @@ procedure TBitVector.Delete(Index: Integer);
 begin
 If MemoryEditable('Delete') then
   begin
-    If CheckIndex(Index) then
+    If CheckIndexAndRaise(Index,'Delete') then
       begin
-        If GetBit_LL(Index) then Dec(fPopCount);
+        If GetBit_LL(Index) then
+          Dec(fPopCount);
         If Index < HighIndex then
           ShiftDown(Index,HighIndex);
         Dec(fCount);
+        Shrink;
         DoOnChange;
-      end
-    else raise Exception.CreateFmt('TBitVector.Delete: Index (%d) out of bounds.',[Index]);
+      end;
   end;
 end;
 
@@ -604,11 +637,12 @@ end;
 
 procedure TBitVector.Exchange(Index1, Index2: Integer);
 begin
-If CheckIndex(Index1,'Exchange',True) and CheckIndex(Index2,'Exchange',True) then
-  begin
-    SetBit_LL(Index2,SetBit_LL(Index1,GetBit_LL(Index2)));
-    DoOnChange;
-  end;
+If Index1 <> Index2 then
+  If CheckIndexAndRaise(Index1,'Exchange') and CheckIndexAndRaise(Index2,'Exchange') then
+    begin
+      SetBit_LL(Index2,SetBit_LL(Index1,GetBit_LL(Index2)));
+      DoOnChange;
+    end;
 end;
 
 //------------------------------------------------------------------------------
@@ -618,7 +652,7 @@ var
   Value:  Boolean;
 begin
 If SrcIdx <> DstIdx then
-  If CheckIndex(SrcIdx,'Move',True) and CheckIndex(DstIdx,'Move',True) then
+  If CheckIndexAndRaise(SrcIdx,'Move') and CheckIndexAndRaise(DstIdx,'Move') then
     begin
       Value := GetBit_LL(SrcIdx);
       If SrcIdx < DstIdx then
@@ -637,21 +671,20 @@ var
   i:  Integer;
 begin
 If FromIdx <= ToIdx then
-  If CheckIndex(FromIdx,'Fill',True) and CheckIndex(ToIdx,'Fill',True) then
+  If CheckIndexAndRaise(FromIdx,'Fill') and CheckIndexAndRaise(ToIdx,'Fill') then
     begin
-      If FromIdx = ToIdx then
-        SetBit(FromIdx,Value)
-      else
+      If FromIdx <> ToIdx then
         begin
           If ((FromIdx and 7) <> 0) or ((ToIdx - FromIdx) < 7) then
-            SetBitsValue(GetBytePtrBitIdx(FromIdx)^,$FF * Ord(Value),FromIdx and 7,Min(ToIdx - (FromIdx and not 7),7));
+            SetBitsValue(GetBytePtrBitIdx(FromIdx)^,$FF * BooleanOrd(Value),FromIdx and 7,Min(ToIdx - (FromIdx and not 7),7));
           For i := Ceil(FromIdx / 8) to Pred(Succ(ToIdx) shr 3) do
-            GetBytePtrByteIdx(i)^ := $FF * Ord(Value);
+            GetBytePtrByteIdx(i)^ := $FF * BooleanOrd(Value);
           If ((ToIdx and 7) < 7) and ((ToIdx and not 7) > FromIdx) then
-            SetBitsValue(GetBytePtrBitIdx(ToIdx)^,$FF * Ord(Value),0,ToIdx and 7);
+            SetBitsValue(GetBytePtrBitIdx(ToIdx)^,$FF * BooleanOrd(Value),0,ToIdx and 7);
           ScanForPopCount;
           DoOnChange;
-        end;
+        end
+      else SetBit(FromIdx,Value);
     end;
 end;
 
@@ -664,8 +697,8 @@ begin
 If fCount > 0 then
   begin
     For i := 0 to (Pred(fCount) shr 3) do
-      GetBytePtrByteIdx(i)^ := $FF * Ord(Value);
-    fPopCount := fCount * Ord(Value);      
+      GetBytePtrByteIdx(i)^ := $FF * BooleanOrd(Value);
+    fPopCount := fCount * BooleanOrd(Value);
     DoOnChange;
   end;
 end;
@@ -677,11 +710,9 @@ var
   i:  Integer;
 begin
 If FromIdx <= ToIdx then
-  If CheckIndex(FromIdx,'Complement',True) and CheckIndex(ToIdx,'Complement',True) then
+  If CheckIndexAndRaise(FromIdx,'Complement') and CheckIndexAndRaise(ToIdx,'Complement') then
     begin
-      If FromIdx = ToIdx then
-        SetBit(FromIdx,not GetBit_LL(FromIdx))
-      else
+      If FromIdx <> ToIdx then
         begin
           If ((FromIdx and 7) <> 0) or ((ToIdx - FromIdx) < 7) then
             SetBitsValue(GetBytePtrBitIdx(FromIdx)^,not GetBytePtrBitIdx(FromIdx)^,FromIdx and 7,Min(ToIdx - (FromIdx and not 7),7));
@@ -689,9 +720,10 @@ If FromIdx <= ToIdx then
             GetBytePtrByteIdx(i)^ := not GetBytePtrByteIdx(i)^;
           If ((ToIdx and 7) < 7) and ((ToIdx and not 7) > FromIdx) then
             SetBitsValue(GetBytePtrBitIdx(ToIdx)^,not GetBytePtrBitIdx(ToIdx)^,0,ToIdx and 7);
-        ScanForPopCount;
-        DoOnChange;
-      end;
+          ScanForPopCount;
+          DoOnChange;
+        end
+      else SetBit(FromIdx,not GetBit_LL(FromIdx));
     end;
 end;
 
@@ -718,6 +750,7 @@ If MemoryEditable('Clear') then
   begin
     fCount := 0;
     fPopCount := 0;
+    Shrink;
     DoOnChange;
   end;
 end;
@@ -747,7 +780,7 @@ end;
 
 Function TBitVector.IsFull: Boolean;
 begin
-Result := (fCount > 0) and (fPopCount = fCount);
+Result := (fCount > 0) and (fPopCount >= fCount);
 end;
 
 //------------------------------------------------------------------------------
@@ -939,11 +972,13 @@ If MemoryEditable('AssignOR') then
     BeginChanging;
     try
       If Count > fCount then Self.Count := Count;
+    {$IFDEF FPCDWM}{$PUSH}W4055{$ENDIF}
       For i := 0 to Pred(Count shr 3) do
         GetBytePtrByteIdx(i)^ := GetBytePtrByteIdx(i)^ or PByte(PtrUInt(Memory) + PtrUInt(i))^;
       If (Count and 7) <> 0 then
         For i := (Count and not 7) to Pred(Count) do
           SetBit_LL(i,GetBit_LL(i) or ((PByte(PtrUInt(Memory) + PtrUInt(Count shr 3))^ shr (i and 7)) and 1 <> 0));
+    {$IFDEF FPCDWM}{$POP}{$ENDIF}
       ScanForPopCount;
       DoOnChange;
     finally
@@ -975,11 +1010,13 @@ If MemoryEditable('AssignAND') then
           Self.Count := Count;
           Fill(i,Pred(fCount),True); 
         end;
+    {$IFDEF FPCDWM}{$PUSH}W4055{$ENDIF}
       For i := 0 to Pred(Count shr 3) do
         GetBytePtrByteIdx(i)^ := GetBytePtrByteIdx(i)^ and PByte(PtrUInt(Memory) + PtrUInt(i))^;
       If (Count and 7) <> 0 then
         For i := (Count and not 7) to Pred(Count) do
           SetBit_LL(i,GetBit_LL(i) and ((PByte(PtrUInt(Memory) + PtrUInt(Count shr 3))^ shr (i and 7)) and 1 <> 0));
+    {$IFDEF FPCDWM}{$POP}{$ENDIF}
       ScanForPopCount;
       DoOnChange;
     finally
@@ -1006,11 +1043,13 @@ If MemoryEditable('AssignXOR') then
     BeginChanging;
     try
       If Count > fCount then Self.Count := Count;
+    {$IFDEF FPCDWM}{$PUSH}W4055{$ENDIF}
       For i := 0 to Pred(Count shr 3) do
         GetBytePtrByteIdx(i)^ := GetBytePtrByteIdx(i)^ xor PByte(PtrUInt(Memory) + PtrUInt(i))^;
       If (Count and 7) <> 0 then
         For i := (Count and not 7) to Pred(Count) do
           SetBit_LL(i,GetBit_LL(i) xor ((PByte(PtrUInt(Memory) + PtrUInt(Count shr 3))^ shr (i and 7)) and 1 <> 0));
+    {$IFDEF FPCDWM}{$POP}{$ENDIF}
       ScanForPopCount;
       DoOnChange;
     finally
@@ -1035,8 +1074,10 @@ begin
 Result := False;
 If (fCount = Vector.Count) and (fPopCount = Vector.PopCount) then
   begin
+  {$IFDEF FPCDWM}{$PUSH}W4055{$ENDIF}
     For i := 0 to Pred(fCount shr 3) do
       If GetBytePtrByteIdx(i)^ <> PByte(PtrUInt(Vector.Memory) + PtrUInt(i))^ then Exit;
+  {$IFDEF FPCDWM}{$POP}{$ENDIF}
     If (fCount and 7) <> 0 then
       For i := (fCount and not 7) to Pred(fCount) do
         If GetBit_LL(i) <> Vector[i] then Exit;
@@ -1100,15 +1141,19 @@ end;
 end;
 
 
-{==============================================================================}
-{------------------------------------------------------------------------------}
-{                      TBitVectorStatic - implementation                       }
-{------------------------------------------------------------------------------}
-{==============================================================================}
+{===============================================================================
+--------------------------------------------------------------------------------
+                                TBitVectorStatic
+--------------------------------------------------------------------------------
+===============================================================================}
 
-{==============================================================================}
-{   TBitVectorStatic - protected methods                                       }
-{==============================================================================}
+{===============================================================================
+    TBitVectorStatic - class implementation
+===============================================================================}
+
+{-------------------------------------------------------------------------------
+    TBitVectorStatic - protected methods
+-------------------------------------------------------------------------------}
 
 procedure TBitVectorStatic.CommonInit;
 begin
@@ -1116,22 +1161,26 @@ inherited;
 fStatic := True;
 end;
 
-{==============================================================================}
-{------------------------------------------------------------------------------}
-{                     TBitVectorStatic32 - implementation                      }
-{------------------------------------------------------------------------------}
-{==============================================================================}
+{===============================================================================
+--------------------------------------------------------------------------------
+                               TBitVectorStatic32
+--------------------------------------------------------------------------------
+===============================================================================}
 
-{==============================================================================}
-{   TBitVectorStatic32 - public methods                                        }
-{==============================================================================}
+{===============================================================================
+    TBitVectorStatic32 - class implementation
+===============================================================================}
+
+{-------------------------------------------------------------------------------
+    TBitVectorStatic32 - public methods
+-------------------------------------------------------------------------------}
 
 constructor TBitVectorStatic32.Create(Memory: Pointer; Count: Integer);
 begin
 If (Count and 31) = 0 then
   inherited Create(Memory,Count)
 else
-  raise Exception.Create('TBitVectorStatic32.Create: Count must be divisible by 32.');
+  RaiseError('Create: Count must be divisible by 32.');
 end;
 
 //   ---   ---   ---   ---   ---   ---   ---   ---   ---   ---   ---   ---   ---
@@ -1141,7 +1190,7 @@ begin
 If (Count and 31) = 0 then
   inherited Create(InitialCount,InitialValue)
 else
-  raise Exception.Create('TBitVectorStatic32.Create: Count must be divisible by 32.');
+  RaiseError('Create: Count must be divisible by 32.');
 end;
 
 //------------------------------------------------------------------------------

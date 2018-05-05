@@ -52,9 +52,11 @@ uses
   APK_Strings;
 
 {$IFDEF FPC_DisableWarns}
-  {$WARN 5024 OFF} // Parameter "$1" not used
+  {$DEFINE FPCDWM}
+  {$DEFINE W5024:={$WARN 5024 OFF}} // Parameter "$1" not used
 {$ENDIF}
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfShortcutForm.OnShortcutSelect(Sender: TObject; Shortcut: TAPKShortcut);
 begin
 Self.Shortcut := Shortcut;
@@ -63,6 +65,7 @@ btnAccept.Enabled := True;
 pnlShortcutPanel.Caption := Format('[%s]',[TAPKKeyboard.ShortcutAsText(Shortcut)]);
 fKeyboard.Mode := kmNone;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
@@ -93,24 +96,30 @@ end;
 
 //==============================================================================
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfShortcutForm.btnRetryClick(Sender: TObject);
 begin
 InitSelection;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
  
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfShortcutForm.btnAcceptClick(Sender: TObject);
 begin
 Accepted := True;
 Close;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TfShortcutForm.btnCancelClick(Sender: TObject);
 begin
 Close;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 end.

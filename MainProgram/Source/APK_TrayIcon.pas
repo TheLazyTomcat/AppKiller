@@ -87,10 +87,15 @@ uses
   Classes, Math, ShellAPI, Forms, APK_Strings, StrRect;
 
 {$IFDEF FPC_DisableWarns}
-  {$WARN 5057 OFF} // Local variable "$1" does not seem to be initialized
+  {$DEFINE FPCDWM}
+  {$DEFINE W5057:={$WARN 5057 OFF}} // Local variable "$1" does not seem to be initialized
+  {$PUSH}{$WARN 2005 OFF} // Comment level $1 found
   {$IF Defined(FPC) and (FPC_FULLVERSION >= 30000)}
-    {$WARN 5092 OFF} // Variable "$1" of a managed type does not seem to be initialized
+    {$DEFINE W5092:={$WARN 5092 OFF}} // Variable "$1" of a managed type does not seem to be initialized
+  {$ELSE}
+    {$DEFINE W5092:=}
   {$IFEND}
+  {$POP}
 {$ENDIF}
 
 {$R '..\Resources\tray_icon.res'}
@@ -159,6 +164,7 @@ end;
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5057{$ENDIF}
 procedure TAPKTrayIcon.MessageHandler(var Msg: TMessage; var Handled: Boolean);
 var
   PopupPoint: TPoint;
@@ -178,6 +184,7 @@ If Msg.Msg = fMessageID then
                         fOnPopupMenuItem(Self,TI_MI_ACTION_Restore);
   end;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
@@ -226,6 +233,7 @@ end;
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5092{$ENDIF}
 procedure TAPKTrayIcon.SetTipText(IconTipText: String);
 begin
 FillChar(fIconData.szTip,SizeOf(fIconData.szTip),0);
@@ -233,6 +241,7 @@ IconTipText := StrToWin(IconTipText);
 Move(PChar(IconTipText)^,Addr(fIconData.szTip)^,Min(Length(IconTipText),Length(fIconData.szTip) - 1) * SizeOf(Char));
 UpdateTrayIcon;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 

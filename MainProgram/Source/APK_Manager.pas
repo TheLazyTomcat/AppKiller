@@ -59,7 +59,8 @@ uses
   SysUtils, StrRect, APK_Strings;
 
 {$IFDEF FPC_DisableWarns}
-  {$WARN 5024 OFF} // Parameter "$1" not used
+  {$DEFINE FPCDWM}
+  {$DEFINE W5024:={$WARN 5024 OFF}} // Parameter "$1" not used
 {$ENDIF}
 
 {==============================================================================}
@@ -76,18 +77,22 @@ uses
 {   TAPKManager - protected methods                                            }
 {------------------------------------------------------------------------------}
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TAPKManager.TriggerHandler(Sender: TObject);
 begin
 fLog.AddLog('Termination started by keybord shortcut...');
 Terminate;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TAPKManager.LogWriteHandler(Sender: TObject; const Text: String);
 begin
 fLog.AddLog(Text);
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 {------------------------------------------------------------------------------}
 {   TAPKManager - public methods                                               }

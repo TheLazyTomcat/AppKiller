@@ -5,19 +5,25 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 -------------------------------------------------------------------------------}
-{==============================================================================}
-{                                                                              }
-{   Multicast event handling class                                             }
-{                                                                              }
-{   ©František Milt 2016-03-01                                                 }
-{                                                                              }
-{   Version 1.0.3                                                              }
-{                                                                              }
-{==============================================================================}
+{===============================================================================
+
+  Multicast event handling class
+
+  ©František Milt 2016-03-01
+
+  Version 1.0.3
+
+  Dependencies:
+    AuxTypes   - github.com/ncs-sniper/Lib.AuxTypes
+    AuxClasses - github.com/ncs-sniper/Lib.AuxClasses
+
+===============================================================================}
 unit MulticastEvent;
 
 {$IFDEF FPC}
   {$MODE ObjFPC}{$H+}
+  {$DEFINE FPC_DisableWarns}
+  {$MACRO ON}
 {$ENDIF}
 
 {$TYPEINFO ON}
@@ -25,40 +31,59 @@ unit MulticastEvent;
 interface
 
 uses
-  Classes;
+  AuxClasses;
+
+{===============================================================================
+--------------------------------------------------------------------------------
+                                TMulticastEvent                                
+--------------------------------------------------------------------------------
+===============================================================================}
 
 type
-  PMethod = ^TMethod;
   TEvent = procedure of object;
 
-{==============================================================================}
-{--- TMulticastEvent declaration ----------------------------------------------}
-{==============================================================================}
+  TMethods = array of TMethod;
 
-  TMulticastEvent = class(TObject)
+{===============================================================================
+    TMulticastEvent - class declaration
+===============================================================================}
+
+  TMulticastEvent = class(TCustomListObject)
   private
     fOwner:   TObject;
-    fMethods: TList;
-    Function GetMethods(Index: Integer): TMethod;
-    Function GetMethodsCount: Integer;
+    fMethods: TMethods;
+    fCount:   Integer;
+    Function GetMethod(Index: Integer): TMethod;
+  protected
+    Function GetCapacity: Integer; override;
+    procedure SetCapacity(Value: Integer); override;
+    Function GetCount: Integer; override;
+    procedure SetCount(Value: Integer); override;
   public
-    constructor Create(aOwner: TObject = nil);
+    constructor Create(Owner: TObject = nil);
     destructor Destroy; override;
+    Function LowIndex: Integer; override;
+    Function HighIndex: Integer; override;
     Function IndexOf(const Handler: TEvent): Integer; virtual;
     Function Add(const Handler: TEvent; AllowDuplicity: Boolean = False): Integer; virtual;
     Function Remove(const Handler: TEvent; RemoveAll: Boolean = True): Integer; virtual;
     procedure Delete(Index: Integer); virtual;
     procedure Clear; virtual;
     procedure Call; virtual;
-    property Methods[Index: Integer]: TMethod read GetMethods;
+    property Methods[Index: Integer]: TMethod read GetMethod;
   published
     property Owner: TObject read fOwner;
-    property Count: Integer read GetMethodsCount;
   end;
 
-{==============================================================================}
-{--- TMulticastNotifyEvent declaration ----------------------------------------}
-{==============================================================================}
+{===============================================================================
+--------------------------------------------------------------------------------
+                             TMulticastNotifyEvent                                                             
+--------------------------------------------------------------------------------
+===============================================================================}
+
+{===============================================================================
+    TMulticastNotifyEvent - class declaration
+===============================================================================}
 
   TMulticastNotifyEvent = class(TMulticastEvent)
   public
@@ -70,31 +95,86 @@ type
 
 implementation
 
-{==============================================================================}
-{--- TMulticastEvent implementation -------------------------------------------}
-{==============================================================================}
+uses
+  SysUtils;
 
-{=== TMulticastEvent // Private routines ======================================}
+{$IFDEF FPC_DisableWarns}
+  {$DEFINE FPCDWM}
+  {$DEFINE W5024:={$WARN 5024 OFF}} // Parameter "$1" not used
+{$ENDIF}
 
-Function TMulticastEvent.GetMethods(Index: Integer): TMethod;
+{===============================================================================
+--------------------------------------------------------------------------------
+                                TMulticastEvent                                
+--------------------------------------------------------------------------------
+===============================================================================}
+
+{===============================================================================
+    TMulticastEvent - class implementation
+===============================================================================}
+
+{-------------------------------------------------------------------------------
+    TMulticastEvent - private methods
+-------------------------------------------------------------------------------}
+
+Function TMulticastEvent.GetMethod(Index: Integer): TMethod;
 begin
-Result := TMethod(fMethods[Index]^);
+If CheckIndex(Index) then
+  Result := fMethods[Index]
+else
+  raise Exception.CreateFmt('TMulticastEvent.GetMethod: Index (%d) out of bounds.',[Index]);
+end;
+
+{-------------------------------------------------------------------------------
+    TMulticastEvent - protected methods
+-------------------------------------------------------------------------------}
+
+Function TMulticastEvent.GetCapacity: Integer;
+begin
+Result := Length(fMethods);
 end;
 
 //------------------------------------------------------------------------------
 
-Function TMulticastEvent.GetMethodsCount: Integer;
+procedure TMulticastEvent.SetCapacity(Value: Integer);
 begin
-Result := fMethods.Count;
+If Value <> Length(fMethods) then
+  begin
+    If Value < Length(fMethods) then
+      fCount := Value;
+    SetLength(fMethods,Value);
+  end;
 end;
 
-{=== TMulticastEvent // Public routines =======================================}
+//------------------------------------------------------------------------------
 
-constructor TMulticastEvent.Create(aOwner: TObject = nil);
+Function TMulticastEvent.GetCount: Integer;
+begin
+Result := fCount;
+end;
+
+//------------------------------------------------------------------------------
+
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
+procedure TMulticastEvent.SetCount(Value: Integer);
+begin
+// do nothing
+end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
+
+{-------------------------------------------------------------------------------
+    TMulticastEvent - public methods
+-------------------------------------------------------------------------------}
+
+constructor TMulticastEvent.Create(Owner: TObject = nil);
 begin
 inherited Create;
-fOwner := aOwner;
-fMethods := TList.Create;
+fOwner := Owner;
+SetLength(fMethods,0);
+fCount := 0;
+// adjust growing, no need for fast growth
+GrowMode := gmLinear;
+GrowFactor := 16;
 end;
 
 //------------------------------------------------------------------------------
@@ -102,8 +182,21 @@ end;
 destructor TMulticastEvent.Destroy;
 begin
 Clear;
-fMethods.Free;
 inherited;
+end;
+
+//------------------------------------------------------------------------------
+
+Function TMulticastEvent.LowIndex: Integer;
+begin
+Result := Low(fMethods);
+end;
+
+//------------------------------------------------------------------------------
+
+Function TMulticastEvent.HighIndex: Integer;
+begin
+Result := Pred(fCount);
 end;
 
 //------------------------------------------------------------------------------
@@ -113,30 +206,28 @@ var
   i:  Integer;
 begin
 Result := -1;
-For i := 0 to Pred(fMethods.Count) do
-  If (PMethod(fMethods[i])^.Code = TMethod(Handler).Code) and
-     (PMethod(fMethods[i])^.Data = TMethod(Handler).Data) then
+For i := LowIndex to HighIndex do
+  If (fMethods[i].Code = TMethod(Handler).Code) and
+     (fMethods[i].Data = TMethod(Handler).Data) then
     begin
       Result := i;
-      Exit;
+      Break{For i};
     end
 end;
 
 //------------------------------------------------------------------------------
 
 Function TMulticastEvent.Add(const Handler: TEvent; AllowDuplicity: Boolean = False): Integer;
-var
-  NewItem:  PMethod;
 begin
 If Assigned(TMethod(Handler).Code) and Assigned(TMethod(Handler).Data) then
   begin
     Result := IndexOf(Handler);
     If (Result < 0) or AllowDuplicity then
       begin
-        New(NewItem);
-        NewItem^.Code := TMethod(Handler).Code;
-        NewItem^.Data := TMethod(Handler).Data;
-        Result := fMethods.Add(NewItem);
+        Grow;
+        Result := fCount;
+        fMethods[Result] := TMethod(Handler);
+        Inc(fCount);
       end;
   end
 else Result := -1;
@@ -148,26 +239,33 @@ Function TMulticastEvent.Remove(const Handler: TEvent; RemoveAll: Boolean = True
 begin
 repeat
   Result := IndexOf(Handler);
-  If Result >= 0 then Delete(Result);
+  If Result >= 0 then
+    Delete(Result);
 until not RemoveAll or (Result < 0);
 end;
 
 //------------------------------------------------------------------------------
 
 procedure TMulticastEvent.Delete(Index: Integer);
+var
+  i:  Integer;
 begin
-Dispose(PMethod(fMethods[Index]));
-fMethods.Delete(Index);
+If CheckIndex(Index) then
+  begin
+    For i := Index to Pred(HighIndex) do
+      fMethods[i] := fMethods[i + 1];
+    Dec(fCount);
+    Shrink;
+  end
+else raise Exception.CreateFmt('TMulticastEvent.Delete: Index (%d) out of bounds.',[Index]);
 end;
 
 //------------------------------------------------------------------------------
 
 procedure TMulticastEvent.Clear;
-var
-  i:  Integer;
 begin
-For i := 0 to Pred(fMethods.Count) do Dispose(PMethod(fMethods[i]));
-fMethods.Clear;
+fCount := 0;
+Shrink;
 end;
 
 //------------------------------------------------------------------------------
@@ -176,17 +274,24 @@ procedure TMulticastEvent.Call;
 var
   i:  Integer;
 begin
-For i := 0 to Pred(fMethods.Count) do
-  TEvent(fMethods[i]^);
+For i := LowIndex to HighIndex do
+  TEvent(fMethods[i]);
 end;
 
 
+{===============================================================================
+--------------------------------------------------------------------------------
+                             TMulticastNotifyEvent                                                             
+--------------------------------------------------------------------------------
+===============================================================================}
 
-{==============================================================================}
-{--- TMulticastNotifyEvent implementation -------------------------------------}
-{==============================================================================}
+{===============================================================================
+    TMulticastNotifyEvent - class implementation
+===============================================================================}
 
-{=== TMulticastNotifyEvent // Public routines =================================}
+{-------------------------------------------------------------------------------
+    TMulticastNotifyEvent - public methods
+-------------------------------------------------------------------------------}
 
 Function TMulticastNotifyEvent.IndexOf(const Handler: TNotifyEvent): Integer;
 begin
@@ -213,7 +318,8 @@ procedure TMulticastNotifyEvent.Call(Sender: TObject);
 var
   i:  Integer;
 begin
-For i := 0 to Pred(Count) do TNotifyEvent(Methods[i])(Sender);
+For i := LowIndex to HighIndex do
+  TNotifyEvent(Methods[i])(Sender);
 end;
 
 end.

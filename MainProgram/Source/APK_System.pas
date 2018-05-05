@@ -86,8 +86,9 @@ uses
   SysUtils;
 
 {$IFDEF FPC_DisableWarns}
-  {$WARN 4055 OFF} // Conversion between ordinals and pointers is not portable
-  {$WARN 5057 OFF} // Local variable "$1" does not seem to be initialized
+  {$DEFINE FPCDWM}
+  {$DEFINE W4055:={$WARN 4055 OFF}} // Conversion between ordinals and pointers is not portable
+  {$DEFINE W5057:={$WARN 5057 OFF}} // Local variable "$1" does not seem to be initialized
 {$ENDIF}
 
 type
@@ -104,6 +105,7 @@ Function AdjustTokenPrivileges(
 
 //==============================================================================
 
+{$IFDEF FPCDWM}{$PUSH}W5057{$ENDIF}
 Function SetPrivilege(const PrivilegeName: String; Enable: Boolean): Boolean;
 var
   Token:            THandle;
@@ -123,6 +125,7 @@ finally
   CloseHandle(Token);
 end;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //==============================================================================
 
@@ -142,14 +145,18 @@ end;
 {$IFNDEF 64bit}
 Function GetWindowLongPtr(hWnd: HWND; nIndex: Integer): Pointer;
 begin
+{$IFDEF FPCDWM}{$PUSH}W4055{$ENDIF}
 Result := Pointer(GetWindowLong(hWnd,nIndex));
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 end;
 
 //------------------------------------------------------------------------------
 
 Function SetWindowLongPtr(hWnd: HWND; nIndex: Integer; dwNewLong: Pointer): Pointer;
 begin
+{$IFDEF FPCDWM}{$PUSH}W4055{$ENDIF}
 Result := Pointer(SetWindowLong(hWnd,nIndex,Integer(dwNewLong)));
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 end;
 {$ENDIF}
 

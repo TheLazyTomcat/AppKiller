@@ -1,6 +1,7 @@
 {$IFDEF FPC}
   {$MODE Delphi}
   {$DEFINE FPC_DisableWarns}
+  {$MACRO ON}
 {$ENDIF}
 
 {$IF defined(CPU64) or defined(CPU64BITS)}

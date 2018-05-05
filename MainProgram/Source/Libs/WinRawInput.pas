@@ -37,6 +37,7 @@ unit WinRawInput;
 {$IFDEF FPC}
   {$MODE ObjFPC}{$H+}
   {$DEFINE FPC_DisableWarns}
+  {$MACRO ON}
 {$ENDIF}
 
 interface
@@ -506,7 +507,8 @@ uses
   AuxTypes;
 
 {$IFDEF FPC_DisableWarns}
-  {$WARN 4055 OFF} // Conversion between ordinals and pointers is not portable
+  {$DEFINE FPCDWM}
+  {$DEFINE W4055:={$WARN 4055 OFF}} // Conversion between ordinals and pointers is not portable
 {$ENDIF}
 
 //------------------------------------------------------------------------------
@@ -520,18 +522,22 @@ end;
 
 Function RAWINPUT_ALIGN(x: Pointer): Pointer;
 begin
+{$IFDEF FPCDWM}{$PUSH}W4055{$ENDIF}
 {$IFDEF 64bit}
 Result := Pointer((PtrUInt(x) + (SizeOf(QWORD) - 1)) and not (SizeOf(QWORD) - 1));
 {$ELSE}
 Result := Pointer((PtrUInt(x) + (SizeOf(DWORD) - 1)) and not (SizeOf(DWORD) - 1));
 {$ENDIF}
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 end;
 
 //------------------------------------------------------------------------------
 
 Function NEXTRAWINPUTBLOCK(ptr: PRAWINPUT): PRAWINPUT;
 begin
+{$IFDEF FPCDWM}{$PUSH}W4055{$ENDIF}
 Result := PRAWINPUT(RAWINPUT_ALIGN(Pointer(PtrUInt(ptr) + ptr^.header.dwSize)));
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 end;
 
 //------------------------------------------------------------------------------
@@ -571,8 +577,10 @@ procedure WoW64Conversion(Data: Pointer; ChangeSize: Boolean = False);
 var
   DataOffset: PtrUInt;
 begin
+{$IFDEF FPCDWM}{$PUSH}W4055{$ENDIF}
 DataOffset := PtrUInt(Addr(TRawInputWoW64(nil^).mouse));
 Move(Pointer(PtrUInt(Data) + DataOffset)^,Addr(PRawInput(Data)^.mouse)^,PRawInput(Data)^.header.dwSize - DataOffset);
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 If ChangeSize then
   Dec(PRawInput(Data)^.header.dwSize,8);
 end;

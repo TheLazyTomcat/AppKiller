@@ -82,7 +82,8 @@ uses
   APK_Strings, APK_System;
 
 {$IFDEF FPC_DisableWarns}
-  {$WARN 5057 OFF} // Local variable "$1" does not seem to be initialized
+  {$DEFINE FPCDWM}
+  {$DEFINE W5057:={$WARN 5057 OFF}} // Local variable "$1" does not seem to be initialized
 {$ENDIF}
 
 {==============================================================================}
@@ -140,6 +141,7 @@ end;
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5057{$ENDIF}
 class Function TAPKSettings.RunAtSystemStartAdd_TS1: Boolean;
 var
   TaskScheduler:  ITaskScheduler;
@@ -193,6 +195,7 @@ finally
   CoUninitialize;
 end;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 

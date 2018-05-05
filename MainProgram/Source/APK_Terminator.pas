@@ -55,9 +55,10 @@ uses
   APK_ProcEnum, APK_System, StrRect, AuxTypes;
 
 {$IFDEF FPC_DisableWarns}
-  {$WARN 4055 OFF} // Conversion between ordinals and pointers is not portable
-  {$WARN 5024 OFF} // Parameter "$1" not used
-  {$WARN 5057 OFF} // Local variable "$1" does not seem to be initialized
+  {$DEFINE FPCDWM}
+  {$DEFINE W4055:={$WARN 4055 OFF}} // Conversion between ordinals and pointers is not portable
+  {$DEFINE W5024:={$WARN 5024 OFF}} // Parameter "$1" not used
+  {$DEFINE W5057:={$WARN 5057 OFF}} // Local variable "$1" does not seem to be initialized
 {$ENDIF}
 
 {==============================================================================}
@@ -221,6 +222,7 @@ end;
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5057{$ENDIF}
 procedure TAPKTerminatorThread.TerminateForegroundWindow;
 var
   ForegroundWindow: HWND;
@@ -255,6 +257,7 @@ If ForegroundWindow <> 0 then
   end
 else WriteToLog(Format('TFW: <ERROR> - Cannot obtain handle to foreground window (0x%.8x).',[GetLastError]));
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
@@ -302,8 +305,10 @@ begin
   Result := False;
   If hwnd <> 0 then
     begin
+    {$IFDEF FPCDWM}{$PUSH}W4055{$ENDIF}
       SetLength(PWindowHandles(lParam)^,Length(PWindowHandles(lParam)^) + 1);
       PWindowHandles(lParam)^[High(PWindowHandles(lParam)^)] := hwnd;
+    {$IFDEF FPCDWM}{$POP}{$ENDIF}
       Result := True;
     end;
 end;
@@ -317,7 +322,9 @@ var
   ProcessHandle:  THandle;
   ProcessName:    String;
 begin
+{$IFDEF FPCDWM}{$PUSH}W4055{$ENDIF}
 If EnumWindows(@EnumWindowsCallback,LPARAM(@Windows)) then
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
   For i := Low(Windows) to High(Windows) do
     begin
       If SendMessageTimeout(Windows[i],WM_NULL,0,0,SMTO_ABORTIFHUNG or SMTO_BLOCK,fLocalSettings.Settings.GeneralSettings.ResponseTimeout,@MsgResult) = 0 then
@@ -408,17 +415,21 @@ end;
 {   TAPKTerminator - protected methods                                         }
 {------------------------------------------------------------------------------}
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TAPKTerminator.ThreadEndHandler(Sender: TObject);
 begin
 fState := tsReady;
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
+{$IFDEF FPCDWM}{$PUSH}W5024{$ENDIF}
 procedure TAPKTerminator.LogWriteHandler(Sender: TObject; const Text: String);
 begin
 If Assigned(fOnLogWrite) then fOnLogWrite(Self,Text);
 end;
+{$IFDEF FPCDWM}{$POP}{$ENDIF}
 
 //------------------------------------------------------------------------------
 
