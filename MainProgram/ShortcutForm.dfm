@@ -22,7 +22,7 @@ object fShortcutForm: TfShortcutForm
     Height = 26
     Alignment = taCenter
     Caption = 
-      'Select key conbination used to start the termination. You can se' +
+      'Select key combination used to start the termination. You can se' +
       'lect any combination of control, alt and shift with any other ke' +
       'y.'
     Constraints.MaxWidth = 344
